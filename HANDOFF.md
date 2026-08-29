@@ -3,13 +3,8 @@
 ## Status (2026-08-29)
 
 - Code pushed to `main` at `git@github.com:sahuishan01/AOD-Promodoro.git`.
-- Three commits on `main`:
-  1. `7cec1e4` — initial codebase
-  2. `9665350` — CI: wire release signing via secrets; fix TimerEngineTest imports
-  3. `6a421f7` — add HANDOFF.md
-- **CI is failing** on every run. Run `33239442256` (`6a421f7`) ended `conclusion: failure` at **step 7 — `Unit tests (timer engine, policy)`**. Steps 8–12 (assemble, sign, upload) are skipped because tests must pass first.
-  - The job-log endpoint (`/actions/jobs/{id}/logs`) returns **403 "Must have admin rights to Repository"** from an unauthenticated curl, so I could not pull the exact stack trace. The exact test failure is unconfirmed.
-- **Local build also fails** — but for a separate, self-inflicted reason (see §Root cause: binfmt_misc corruption), NOT a code problem.
+- **Local build & tests:** Resolved aarch64 binfmt_misc emulation for AAPT2 and fixed coroutine scheduling in `TimerEngineTest`. All 7 unit tests pass cleanly, and both `assembleDebug`, `assembleRelease`, and `bundleRelease` build successfully.
+- **CI / Release:** Workflow updated with release publishing support on tag pushes (`v*`).
 
 ## Quick diagnostic (run from repo root on any machine with Gradle)
 

@@ -3,6 +3,7 @@ package com.aod.pomodromo.timer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,7 +17,7 @@ import kotlin.time.Duration.Companion.seconds
 class TimerEngineTest {
 
     private fun TestScope.engine(): TimerEngine =
-        TimerEngine(this, TickClock { currentTime })
+        TimerEngine(backgroundScope, TickClock { testScheduler.currentTime })
 
     @Test
     fun `start enters WORKING with full work duration`() = runTest {
@@ -90,6 +91,7 @@ class TimerEngineTest {
         e.configure(2.minutes, 1.minutes)
         e.start()
         advanceTimeBy(90.seconds)
+        runCurrent()
         val remaining = e.snapshot.value.remaining
         assertEquals(30.seconds, remaining)
     }
