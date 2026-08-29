@@ -1,11 +1,12 @@
 package com.aod.pomodromo.timer
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Duration.Companion.minutes
@@ -31,8 +32,7 @@ class TimerEngineTest {
         val e = engine()
         e.configure(1.minutes, 1.minutes)
         e.start()
-        // Virtual time drives the monotonic fake clock — no wall-clock dependency.
-        kotlinx.coroutines.test.advanceTimeBy(61.seconds)
+        advanceTimeBy(61.seconds)
         assertEquals(TimerPhase.RESTING, e.snapshot.value.phase)
     }
 
@@ -41,10 +41,10 @@ class TimerEngineTest {
         val e = engine()
         e.configure(10.minutes, 5.minutes)
         e.start()
-        kotlinx.coroutines.test.advanceTimeBy(30.seconds)
+        advanceTimeBy(30.seconds)
         e.pause()
         val frozenRemaining = e.snapshot.value.remaining
-        kotlinx.coroutines.test.advanceTimeBy(60.seconds)
+        advanceTimeBy(60.seconds)
         assertEquals(frozenRemaining, e.snapshot.value.remaining)
         assertTrue(e.snapshot.value.isPaused)
         e.resume()
@@ -74,10 +74,10 @@ class TimerEngineTest {
 
     @Test
     fun `config validation rejects out of range durations`() {
-        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             TimerConfig(121.minutes, 5.minutes)
         }
-        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             TimerConfig(25.minutes, 61.minutes)
         }
     }
@@ -89,7 +89,7 @@ class TimerEngineTest {
         val e = engine()
         e.configure(2.minutes, 1.minutes)
         e.start()
-        kotlinx.coroutines.test.advanceTimeBy(90.seconds)
+        advanceTimeBy(90.seconds)
         val remaining = e.snapshot.value.remaining
         assertEquals(30.seconds, remaining)
     }

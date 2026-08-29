@@ -30,18 +30,33 @@ jobs:
       - name: Unit tests (timer engine, policy)
         run: ./gradlew testDebugUnitTest --console=plain
 
-      - name: Assemble debug APK (installable artifact)
+      - name: Assemble debug APK
         run: ./gradlew assembleDebug --console=plain
 
-      - name: Assemble unsigned release AAB
-        run: ./gradlew bundleRelease --console=plain
+      - name: Decode signing keystore
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          if [ -n "$SIGNING_KEY" ]; then
+            echo "$SIGNING_KEY" | base64 -d > "$RUNNER_TEMP/pomodromo.jks"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/pomodromo.jks" >> "$GITHUB_ENV"
+          else
+            echo "KEYSTORE_PATH=" >> "$GITHUB_ENV"
+          fi
 
-      # Release signing is wired but skipped unless org secrets are set:
-      #   SIGNING_KEY (base64 of .jks), SIGNING_KEY_ALIAS, SIGNING_STORE_PASSWORD, SIGNING_KEY_PASSWORD
-      # Uncomment to enable:
-      # - name: Decode signing key
-      #   if: ${{ secrets.SIGNING_KEY != '' }}
-      #   run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > keystore.jks
+      - name: Assemble + sign release AAB
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_PATH" ]; then
+            ./gradlew bundleRelease --console=plain
+          else
+            echo "Signing secrets not set — building unsigned release AAB"
+            ./gradlew bundleRelease --console=plain
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

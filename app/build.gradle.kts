@@ -18,6 +18,18 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            val path = System.getenv("KEYSTORE_PATH") ?: ""
+            if (path.isNotEmpty()) {
+                storeFile = file(path)
+                storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -29,6 +41,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (System.getenv("KEYSTORE_PATH")?.isNotEmpty() == true) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
