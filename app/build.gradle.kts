@@ -21,7 +21,7 @@ android {
     signingConfigs {
         create("release") {
             val path = System.getenv("KEYSTORE_PATH") ?: ""
-            if (path.isNotEmpty()) {
+            if (path.isNotEmpty() && file(path).exists() && file(path).length() > 0L) {
                 storeFile = file(path)
                 storePassword = System.getenv("SIGNING_STORE_PASSWORD")
                 keyAlias = System.getenv("SIGNING_KEY_ALIAS")
@@ -41,7 +41,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (System.getenv("KEYSTORE_PATH")?.isNotEmpty() == true) {
+            val path = System.getenv("KEYSTORE_PATH") ?: ""
+            if (path.isNotEmpty() && file(path).exists() && file(path).length() > 0L && System.getenv("SIGNING_KEY_ALIAS")?.isNotEmpty() == true) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
