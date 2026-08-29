@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AOD Pomodromo</string>
+
+    <!-- Timer screen -->
+    <string name="phase_idle">Ready</string>
+    <string name="phase_working">Focus</string>
+    <string name="phase_resting">Rest</string>
+    <string name="phase_complete">Complete</string>
+    <string name="action_start">Start</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_skip">Skip</string>
+    <string name="action_settings">Settings</string>
+    <string name="cd_timer_clock">Time remaining in current phase</string>
+    <string name="cd_phase_badge">Current pomodoro phase</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_work_duration">Work duration</string>
+    <string name="settings_rest_duration">Rest duration</string>
+    <string name="settings_minutes_format">%1$d min</string>
+    <string name="settings_background">Background</string>
+    <string name="settings_pick_image">Pick image…</string>
+    <string name="settings_audio">Ambient sound</string>
+    <string name="settings_audio_none">Off</string>
+    <string name="settings_pick_audio">Pick audio file…</string>
+    <string name="settings_volume">Volume</string>
+    <string name="settings_auto_dim">Auto-dim after 5 min</string>
+    <string name="settings_haptics">Haptic phase cue</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_media_rejected">That file can\'t be used (unsupported type or too large).</string>
+    <string name="settings_media_revoked">Lost access to the picked file — reverted to default.</string>
+
+    <!-- Notification -->
+    <string name="notif_channel_timer">Timer</string>
+    <string name="notif_channel_timer_desc">Pomodoro phase progress</string>
+    <string name="notif_title_format">%1$s · %2$s left</string>
+    <string name="notif_permission_rationale">Notifications let the timer keep you posted while the app is in the background.</string>
+
+    <!-- Bundled tracks -->
+    <string name="track_rain_drift">Rain Drift</string>
+    <string name="track_night_pad">Night Pad</string>
+</resources>
