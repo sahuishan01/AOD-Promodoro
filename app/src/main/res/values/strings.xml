@@ -28,6 +28,8 @@
     <string name="settings_pick_audio">Pick audio file…</string>
     <string name="settings_volume">Volume</string>
     <string name="settings_auto_dim">Auto-dim after 5 min</string>
+    <string name="settings_keep_screen_on">Always-on display (Keep screen on)</string>
+    <string name="settings_show_when_locked">Show over lock screen</string>
     <string name="settings_haptics">Haptic phase cue</string>
     <string name="settings_back">Back</string>
     <string name="settings_media_rejected">That file can\'t be used (unsupported type or too large).</string>

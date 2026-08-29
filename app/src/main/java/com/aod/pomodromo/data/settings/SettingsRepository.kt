@@ -26,6 +26,8 @@ data class AppSettings(
     val audioSelection: String = "off",
     val autoDimEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
+    val keepScreenOn: Boolean = true,
+    val showWhenLocked: Boolean = true,
 )
 
 @Singleton
@@ -40,6 +42,8 @@ class SettingsRepository @Inject constructor(
         val AUDIO = stringPreferencesKey("audio_selection")
         val AUTO_DIM = booleanPreferencesKey("auto_dim")
         val HAPTICS = booleanPreferencesKey("haptics")
+        val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+        val SHOW_WHEN_LOCKED = booleanPreferencesKey("show_when_locked")
     }
 
     val settings: Flow<AppSettings> = dataStore.data.map { p ->
@@ -51,6 +55,8 @@ class SettingsRepository @Inject constructor(
             audioSelection = p[Keys.AUDIO] ?: "off",
             autoDimEnabled = p[Keys.AUTO_DIM] ?: true,
             hapticsEnabled = p[Keys.HAPTICS] ?: true,
+            keepScreenOn = p[Keys.KEEP_SCREEN_ON] ?: true,
+            showWhenLocked = p[Keys.SHOW_WHEN_LOCKED] ?: true,
         )
     }
 
@@ -61,4 +67,6 @@ class SettingsRepository @Inject constructor(
     suspend fun setAudioSelection(sel: String) = dataStore.edit { it[Keys.AUDIO] = sel }
     suspend fun setAutoDim(enabled: Boolean) = dataStore.edit { it[Keys.AUTO_DIM] = enabled }
     suspend fun setHaptics(enabled: Boolean) = dataStore.edit { it[Keys.HAPTICS] = enabled }
+    suspend fun setKeepScreenOn(enabled: Boolean) = dataStore.edit { it[Keys.KEEP_SCREEN_ON] = enabled }
+    suspend fun setShowWhenLocked(enabled: Boolean) = dataStore.edit { it[Keys.SHOW_WHEN_LOCKED] = enabled }
 }

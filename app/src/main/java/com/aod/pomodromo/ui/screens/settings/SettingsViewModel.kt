@@ -51,6 +51,8 @@ class SettingsViewModel @Inject constructor(
     }
     fun setAutoDim(v: Boolean) = viewModelScope.launch { settingsRepository.setAutoDim(v) }
     fun setHaptics(v: Boolean) = viewModelScope.launch { settingsRepository.setHaptics(v) }
+    fun setKeepScreenOn(v: Boolean) = viewModelScope.launch { settingsRepository.setKeepScreenOn(v) }
+    fun setShowWhenLocked(v: Boolean) = viewModelScope.launch { settingsRepository.setShowWhenLocked(v) }
 
     fun selectBundledBackground(id: String) = viewModelScope.launch {
         settingsRepository.setBackground("bundled:$id")

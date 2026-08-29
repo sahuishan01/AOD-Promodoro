@@ -11,13 +11,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Stop
-import androidx.compose.material.icons.outlined.VolumeOff
-import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,9 +59,9 @@ fun TimerScreen(
     val view = LocalView.current
     val haptics = LocalHapticFeedback.current
 
-    // Screen stays on while this screen is composed — no WakeLock needed.
-    DisposableEffect(Unit) {
-        view.keepScreenOn = true
+    // Screen stays on while this screen is composed and keepScreenOn is enabled.
+    DisposableEffect(ui.settings.keepScreenOn) {
+        view.keepScreenOn = ui.settings.keepScreenOn
         onDispose { view.keepScreenOn = false }
     }
 
@@ -232,7 +232,7 @@ private fun VolumeRow(
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onToggle) {
             Icon(
-                if (playing) Icons.Outlined.VolumeUp else Icons.Outlined.VolumeOff,
+                if (playing) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff,
                 contentDescription = stringResource(
                     if (playing) R.string.action_pause else R.string.action_start
                 ),

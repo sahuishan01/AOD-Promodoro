@@ -10,6 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import android.os.Build
+import android.view.WindowManager
+import com.aod.pomodromo.data.settings.SettingsRepository
 import com.aod.pomodromo.service.TimerForegroundService
 import com.aod.pomodromo.timer.TimerEngine
 import com.aod.pomodromo.ui.screens.settings.SettingsScreen
@@ -26,6 +29,7 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var engine: TimerEngine
+    @Inject lateinit var settingsRepository: SettingsRepository
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -35,13 +39,35 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Enable show over lock screen and turn screen on programmatically
+        configureLockScreenAndScreenOn(showWhenLocked = true, turnScreenOn = true)
+
+        // Observe user settings to dynamically control AOD keep-screen-on and lock screen visibility
+        lifecycleScope.launch {
+            settingsRepository.settings.collect { settings ->
+                configureLockScreenAndScreenOn(
+                    showWhenLocked = settings.showWhenLocked,
+                    turnScreenOn = true,
+                )
+                if (settings.keepScreenOn) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+            }
+        }
+
         // Start/stop the keep-alive FGS in lockstep with engine run state.
         lifecycleScope.launch {
             engine.snapshot
-                .map { it.phase.isRunning }
+                .map { it.phase }
                 .distinctUntilChanged()
-                .collect { running ->
-                    if (running) TimerForegroundService.start(this@MainActivity)
+                .collect { phase ->
+                    if (phase.isRunning) {
+                        TimerForegroundService.start(this@MainActivity)
+                        // Illuminate / wake the screen on phase start/transition
+                        configureLockScreenAndScreenOn(showWhenLocked = true, turnScreenOn = true)
+                    }
                 }
         }
 
@@ -58,6 +84,26 @@ class MainActivity : ComponentActivity() {
         // (e.g., activity recreated after process restore).
         if (engine.snapshot.value.phase.isRunning) {
             TimerForegroundService.start(this)
+        }
+    }
+
+    private fun configureLockScreenAndScreenOn(showWhenLocked: Boolean, turnScreenOn: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(showWhenLocked)
+            setTurnScreenOn(turnScreenOn)
+        } else {
+            @Suppress("DEPRECATION")
+            if (showWhenLocked) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            }
+            @Suppress("DEPRECATION")
+            if (turnScreenOn) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+            }
         }
     }
 

@@ -169,6 +169,16 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
         ToggleRow(
+            label = stringResource(R.string.settings_keep_screen_on),
+            checked = settings.keepScreenOn,
+            onChange = viewModel::setKeepScreenOn,
+        )
+        ToggleRow(
+            label = stringResource(R.string.settings_show_when_locked),
+            checked = settings.showWhenLocked,
+            onChange = viewModel::setShowWhenLocked,
+        )
+        ToggleRow(
             label = stringResource(R.string.settings_auto_dim),
             checked = settings.autoDimEnabled,
             onChange = viewModel::setAutoDim,

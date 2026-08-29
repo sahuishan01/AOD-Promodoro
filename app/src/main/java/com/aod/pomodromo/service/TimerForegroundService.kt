@@ -96,7 +96,9 @@ class TimerForegroundService : Service() {
         )
         val contentIntent = PendingIntent.getActivity(
             this, 0,
-            Intent(this, MainActivity::class.java),
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val builder = NotificationCompat.Builder(this, PomodoroApp.TIMER_CHANNEL_ID)
@@ -106,6 +108,8 @@ class TimerForegroundService : Service() {
             .setOngoing(true)
             .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setOnlyAlertOnce(true)
 
         if (snap.isPaused) {
