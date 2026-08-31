@@ -124,7 +124,7 @@ fun SettingsScreen(
                         Modifier
                             .size(56.dp)
                             .background(
-                                Brush.verticalGradient(bg.colors.map { Color(it) }),
+                                bg.toBrush(),
                                 shape = CircleShape,
                             ),
                     )

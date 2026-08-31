@@ -35,13 +35,7 @@ fun BackgroundSurface(
     Box(modifier = modifier.fillMaxSize()) {
         when (model) {
             is BackgroundModel.Bundled -> {
-                val colors = model.background.colors.map { Color(it) }
-                val brush = if (colors.size == 1) {
-                    Brush.verticalGradient(listOf(colors[0], colors[0]))
-                } else {
-                    Brush.verticalGradient(colors)
-                }
-                Box(Modifier.fillMaxSize().background(brush))
+                Box(Modifier.fillMaxSize().background(model.background.toBrush()))
             }
             is BackgroundModel.UserImage -> {
                 val context = LocalContext.current

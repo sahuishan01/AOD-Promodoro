@@ -1,5 +1,8 @@
 package com.algosculptor.pomodoro.data.background
 
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+
 /** A bundled background: one color = solid, two+ = vertical gradient. */
 data class BundledBackground(
     val id: String,
@@ -9,6 +12,15 @@ data class BundledBackground(
     val accentColor: Long,
 ) {
     val isGradient: Boolean get() = colors.size > 1
+
+    fun toBrush(): Brush {
+        val mapped = colors.map { Color(it) }
+        return if (mapped.size == 1) {
+            Brush.verticalGradient(listOf(mapped[0], mapped[0]))
+        } else {
+            Brush.verticalGradient(mapped)
+        }
+    }
 }
 
 /**
