@@ -14,8 +14,8 @@ android {
         applicationId = "com.algosculptor.pomodoro"
         minSdk = 34
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.2.2"
     }
 
     signingConfigs {
@@ -44,6 +44,8 @@ android {
             val path = System.getenv("KEYSTORE_PATH") ?: ""
             if (path.isNotEmpty() && file(path).exists() && file(path).length() > 0L && System.getenv("SIGNING_KEY_ALIAS")?.isNotEmpty() == true) {
                 signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
             }
         }
     }
