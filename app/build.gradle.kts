@@ -21,9 +21,9 @@ android {
     signingConfigs {
         create("release") {
             val envPath = System.getenv("KEYSTORE_PATH") ?: ""
-            val envPass = System.getenv("SIGNING_STORE_PASSWORD") ?: "androidpassword"
-            val envAlias = System.getenv("SIGNING_KEY_ALIAS") ?: "pomodoro"
-            val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD") ?: "androidpassword"
+            val envPass = System.getenv("SIGNING_STORE_PASSWORD")?.takeIf { it.isNotEmpty() } ?: "androidpassword"
+            val envAlias = System.getenv("SIGNING_KEY_ALIAS")?.takeIf { it.isNotEmpty() } ?: "pomodoro"
+            val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD")?.takeIf { it.isNotEmpty() } ?: "androidpassword"
             if (envPath.isNotEmpty() && file(envPath).exists()) {
                 storeFile = file(envPath)
                 storePassword = envPass

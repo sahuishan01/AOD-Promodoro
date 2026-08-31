@@ -63,9 +63,9 @@ jobs:
       - name: Assemble & bundle release
         env:
           KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
+          SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
         run: |
           ./gradlew bundleRelease assembleRelease --console=plain --stacktrace
 
