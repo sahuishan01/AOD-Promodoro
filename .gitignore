@@ -1,10 +1,9 @@
 # CI builds regenerate these; WAVs are too large for the repo (DEVELOPMENT-PLAN.md §Phase 5).
 app/src/main/res/raw/*.wav
 
-# Keystores & secrets
+# Keystores & secrets must never enter VCS.
 *.jks
 *.keystore
-!app/keystore/release.jks
 keystore.properties
 .env
 
