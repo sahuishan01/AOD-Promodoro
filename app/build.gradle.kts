@@ -30,6 +30,7 @@ android {
                 storePassword = envPass
                 keyAlias = envAlias
                 keyPassword = envKeyPass
+                storeType = "jks"
             }
         }
     }
@@ -48,6 +49,8 @@ android {
             val relConfig = signingConfigs.findByName("release")
             if (relConfig?.storeFile != null && relConfig.storeFile!!.exists()) {
                 signingConfig = relConfig
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
             }
         }
     }
