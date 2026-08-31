@@ -25,6 +25,10 @@ import com.algosculptor.pomodoro.timer.TimerEngine
 import com.algosculptor.pomodoro.ui.screens.settings.SettingsScreen
 import com.algosculptor.pomodoro.ui.screens.timer.TimerScreen
 import com.algosculptor.pomodoro.ui.theme.PomodoroTheme
+import androidx.compose.runtime.DisposableEffect
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -92,7 +96,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                 ) {
-                    AppNav()
+                    AppNav(setImmersive = ::setFullscreenImmersive)
                 }
             }
         }
@@ -108,22 +112,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupAutoRotateListener() {
-        orientationListener = object : OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
-            private var lastOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-
+        orientationListener = object : OrientationEventListener(this, SensorManager.SENSOR_DELAY_UI) {
             override fun onOrientationChanged(orientation: Int) {
                 if (orientation == ORIENTATION_UNKNOWN) return
 
                 val targetOrientation = when {
-                    orientation in 60..120 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
-                    orientation in 240..300 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                    orientation in 330..359 || orientation in 0..30 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                    orientation in 150..210 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
-                    else -> lastOrientation
+                    orientation in 45..135 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                    orientation in 225..315 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    orientation in 315..360 || orientation in 0..45 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    orientation in 135..225 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+                    else -> requestedOrientation
                 }
 
-                if (targetOrientation != lastOrientation && targetOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-                    lastOrientation = targetOrientation
+                if (targetOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED && requestedOrientation != targetOrientation) {
                     requestedOrientation = targetOrientation
                 }
             }
@@ -158,13 +159,34 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun setFullscreenImmersive(immersive: Boolean) {
+        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+        if (immersive) {
+            insetsController.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            insetsController.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        setFullscreenImmersive(true)
+        orientationListener?.enable()
         lifecycleScope.launch {
             val settings = settingsRepository.settings.first()
             if (settings.keepScreenOn) {
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            setFullscreenImmersive(true)
+            orientationListener?.enable()
         }
     }
 
@@ -181,13 +203,24 @@ private const val ROUTE_TIMER = "timer"
 private const val ROUTE_SETTINGS = "settings"
 
 @Composable
-private fun AppNav() {
+private fun AppNav(setImmersive: (Boolean) -> Unit) {
     val nav = rememberNavController()
     NavHost(navController = nav, startDestination = ROUTE_TIMER) {
         composable(ROUTE_TIMER) {
-            TimerScreen(onOpenSettings = { nav.navigate(ROUTE_SETTINGS) })
+            DisposableEffect(Unit) {
+                setImmersive(true)
+                onDispose { }
+            }
+            TimerScreen(onOpenSettings = {
+                setImmersive(false)
+                nav.navigate(ROUTE_SETTINGS)
+            })
         }
         composable(ROUTE_SETTINGS) {
+            DisposableEffect(Unit) {
+                setImmersive(false)
+                onDispose { setImmersive(true) }
+            }
             SettingsScreen(onBack = { nav.popBackStack() })
         }
     }

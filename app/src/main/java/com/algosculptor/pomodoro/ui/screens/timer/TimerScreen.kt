@@ -2,6 +2,7 @@ package com.algosculptor.pomodoro.ui.screens.timer
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +45,11 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -96,24 +102,115 @@ fun TimerScreen(
         resolveBackground(ui.settings.backgroundId)
     }
 
+    var lastTouchMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val isIdleRunning = ui.snapshot.phase.isRunning && (System.currentTimeMillis() - lastTouchMillis > 8_000)
+    val controlsAlpha by animateFloatAsState(
+        targetValue = if (isIdleRunning) 0.18f else 1.0f,
+        animationSpec = tween(durationMillis = 600),
+        label = "controlsAlpha"
+    )
+
     BackgroundSurface(model = backgroundModel) {
-        if (isLandscape) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 48.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures { lastTouchMillis = System.currentTimeMillis() }
+                }
+        ) {
+            if (isLandscape) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 48.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.weight(1.1f),
+                    ) {
+                        PhaseBadge(ui.snapshot.phase)
+                        Spacer(Modifier.height(8.dp))
+                        AodClock(
+                            text = TimeFormatter.formatClock(
+                                if (ui.snapshot.phase == TimerPhase.IDLE) ui.settings.workMinutes.minutes
+                                else ui.snapshot.remaining
+                            ),
+                            contentDescription = stringResource(R.string.cd_timer_clock),
+                            dimmed = dimmed,
+                            fontSize = 72.sp,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Cycle ${ui.snapshot.completedCycles + 1}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .weight(0.9f)
+                            .alpha(controlsAlpha),
+                    ) {
+                        ControlsRow(
+                            phase = ui.snapshot.phase,
+                            isPaused = ui.snapshot.isPaused,
+                            onStart = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.start()
+                            },
+                            onPause = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.pause()
+                            },
+                            onResume = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.resume()
+                            },
+                            onReset = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.reset()
+                            },
+                            onSkip = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.skip()
+                            },
+                        )
+                        Spacer(Modifier.height(20.dp))
+                        VolumeRow(
+                            playing = ui.audioPlaying,
+                            volume = ui.settings.volume,
+                            onToggle = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.toggleAudio()
+                            },
+                            onVolume = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.setVolume(it)
+                            },
+                        )
+                    }
+                }
+            } else {
                 Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.weight(1.1f),
                 ) {
                     PhaseBadge(ui.snapshot.phase)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(16.dp))
+
                     AodClock(
                         text = TimeFormatter.formatClock(
                             if (ui.snapshot.phase == TimerPhase.IDLE) ui.settings.workMinutes.minutes
@@ -121,102 +218,77 @@ fun TimerScreen(
                         ),
                         contentDescription = stringResource(R.string.cd_timer_clock),
                         dimmed = dimmed,
-                        fontSize = 72.sp,
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Cycle ${ui.snapshot.completedCycles + 1}",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
+                    Spacer(Modifier.height(48.dp))
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.weight(0.9f),
-                ) {
-                    ControlsRow(
-                        phase = ui.snapshot.phase,
-                        isPaused = ui.snapshot.isPaused,
-                        onStart = viewModel::start,
-                        onPause = viewModel::pause,
-                        onResume = viewModel::resume,
-                        onReset = viewModel::reset,
-                        onSkip = viewModel::skip,
-                    )
-                    Spacer(Modifier.height(20.dp))
-                    VolumeRow(
-                        playing = ui.audioPlaying,
-                        volume = ui.settings.volume,
-                        onToggle = viewModel::toggleAudio,
-                        onVolume = viewModel::setVolume,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.alpha(controlsAlpha)
+                    ) {
+                        ControlsRow(
+                            phase = ui.snapshot.phase,
+                            isPaused = ui.snapshot.isPaused,
+                            onStart = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.start()
+                            },
+                            onPause = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.pause()
+                            },
+                            onResume = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.resume()
+                            },
+                            onReset = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.reset()
+                            },
+                            onSkip = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.skip()
+                            },
+                        )
+                        Spacer(Modifier.height(32.dp))
+
+                        VolumeRow(
+                            playing = ui.audioPlaying,
+                            volume = ui.settings.volume,
+                            onToggle = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.toggleAudio()
+                            },
+                            onVolume = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.setVolume(it)
+                            },
+                        )
+                    }
                 }
             }
-        } else {
-            Column(
+
+            IconButton(
+                onClick = onOpenSettings,
                 modifier = Modifier
-                    .fillMaxSize()
+                    .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                    .padding(12.dp)
+                    .size(48.dp)
+                    .alpha(controlsAlpha),
             ) {
-                PhaseBadge(ui.snapshot.phase)
-                Spacer(Modifier.height(16.dp))
-
-                AodClock(
-                    text = TimeFormatter.formatClock(
-                        if (ui.snapshot.phase == TimerPhase.IDLE) ui.settings.workMinutes.minutes
-                        else ui.snapshot.remaining
-                    ),
-                    contentDescription = stringResource(R.string.cd_timer_clock),
-                    dimmed = dimmed,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Cycle ${ui.snapshot.completedCycles + 1}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(48.dp))
-
-                ControlsRow(
-                    phase = ui.snapshot.phase,
-                    isPaused = ui.snapshot.isPaused,
-                    onStart = viewModel::start,
-                    onPause = viewModel::pause,
-                    onResume = viewModel::resume,
-                    onReset = viewModel::reset,
-                    onSkip = viewModel::skip,
-                )
-                Spacer(Modifier.height(32.dp))
-
-                VolumeRow(
-                    playing = ui.audioPlaying,
-                    volume = ui.settings.volume,
-                    onToggle = viewModel::toggleAudio,
-                    onVolume = viewModel::setVolume,
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.action_settings),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(28.dp),
                 )
             }
-        }
-
-        IconButton(
-            onClick = onOpenSettings,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(12.dp)
-                .size(48.dp),
-        ) {
-            Icon(
-                Icons.Default.Settings,
-                contentDescription = stringResource(R.string.action_settings),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(28.dp),
-            )
         }
     }
 }

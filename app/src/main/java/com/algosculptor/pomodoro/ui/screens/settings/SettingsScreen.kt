@@ -46,12 +46,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.provider.Settings
 import android.widget.Toast
-
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.material3.Surface
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun SettingsScreen(
@@ -220,6 +222,28 @@ fun SettingsScreen(
                 checked = settings.hapticsEnabled,
                 onChange = viewModel::setHaptics,
             )
+
+            Spacer(Modifier.height(24.dp))
+            OutlinedButton(
+                onClick = {
+                    try {
+                        val intent = Intent(Settings.ACTION_DREAM_SETTINGS)
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        try {
+                            val fallbackIntent = Intent(Settings.ACTION_DISPLAY_SETTINGS)
+                            context.startActivity(fallbackIntent)
+                        } catch (ignored: Exception) { }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    "Configure System Screen Saver / AOD",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             Spacer(Modifier.height(32.dp))
         }
     }
