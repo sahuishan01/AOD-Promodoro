@@ -75,14 +75,24 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
           SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --console=plain --info --stacktrace
+        run: |
+          ./gradlew assembleRelease --console=plain --stacktrace 2>&1 | tee assemble-release.log || {
+            echo "::error::assembleRelease failed! Last 150 lines of build output:"
+            tail -n 150 assemble-release.log
+            exit 1
+          }
 
       - name: Bundle release AAB
         env:
           SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
           SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
-        run: ./gradlew bundleRelease --console=plain --info --stacktrace
+        run: |
+          ./gradlew bundleRelease --console=plain --stacktrace 2>&1 | tee bundle-release.log || {
+            echo "::error::bundleRelease failed! Last 150 lines of build output:"
+            tail -n 150 bundle-release.log
+            exit 1
+          }
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4

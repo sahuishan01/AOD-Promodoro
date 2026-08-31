@@ -30,7 +30,6 @@ android {
                 storePassword = envPass
                 keyAlias = envAlias
                 keyPassword = envKeyPass
-                storeType = "jks"
             }
         }
     }
