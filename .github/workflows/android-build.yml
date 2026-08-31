@@ -40,9 +40,9 @@ jobs:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
           if [ -n "${SIGNING_KEY:-}" ]; then
-            echo "$SIGNING_KEY" | base64 -di > "$RUNNER_TEMP/pomodromo.jks" 2>/dev/null || true
-            if [ -s "$RUNNER_TEMP/pomodromo.jks" ]; then
-              echo "KEYSTORE_PATH=$RUNNER_TEMP/pomodromo.jks" >> "$GITHUB_ENV"
+            echo "$SIGNING_KEY" | base64 -di > "$RUNNER_TEMP/pomodoro.jks" 2>/dev/null || true
+            if [ -s "$RUNNER_TEMP/pomodoro.jks" ]; then
+              echo "KEYSTORE_PATH=$RUNNER_TEMP/pomodoro.jks" >> "$GITHUB_ENV"
               echo "Keystore decoded successfully."
             else
               echo "::warning::Failed to decode SIGNING_KEY into a valid keystore. Proceeding with unsigned build."
@@ -65,13 +65,13 @@ jobs:
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: aod-pomodromo-apks
+          name: aod-pomodoro-apks
           path: app/build/outputs/apk/**/*.apk
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
-          name: aod-pomodromo-release-aab
+          name: aod-pomodoro-release-aab
           path: app/build/outputs/bundle/release/*.aab
           if-no-files-found: warn
 

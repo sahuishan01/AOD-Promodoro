@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.aod.pomodromo"
+    namespace = "com.algosculptor.pomodoro"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.aod.pomodromo"
+        applicationId = "com.algosculptor.pomodoro"
         minSdk = 34
         targetSdk = 35
         versionCode = 1

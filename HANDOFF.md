@@ -1,4 +1,4 @@
-# AOD Pomodromo — Handoff (Ishan Sahu)
+# AOD Pomodoro — Handoff (Ishan Sahu)
 
 ## Status (2026-08-29)
 
@@ -54,30 +54,30 @@ If none of the above works, **hard-reboot via the OCI Console again** — binfmt
 6. `./gradlew testDebugUnitTest`
 7. `./gradlew assembleDebug` → uploads debug APK artifact
 8. **Release signing** (optional, gated on secrets):
-   - Decodes `secrets.SIGNING_KEY` (base64) to `$RUNNER_TEMP/pomodromo.jks`
+   - Decodes `secrets.SIGNING_KEY` (base64) to `$RUNNER_TEMP/pomodoro.jks`
    - Exports `KEYSTORE_PATH`
    - `app/build.gradle.kts` reads `KEYSTORE_PATH`, `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD` to populate a `release` `signingConfig`; only applied to `bundleRelease` when the path is non-empty
    - If secrets are absent, builds an **unsigned** release AAB (fine for testing the Gradle plumbing; not installable on device or uploadable to Play)
-9. Uploads three artifacts: `aod-pomodromo-debug-apk`, `aod-pomodromo-release-aab`, `unit-test-results`
+9. Uploads three artifacts: `aod-pomodoro-debug-apk`, `aod-pomodoro-release-aab`, `unit-test-results`
 
 ## Secrets to add (Repo → Settings → Secrets and variables → Actions)
 
 | Secret | How to produce |
 |---|---|
-| `SIGNING_KEY` | Base64 of the `.jks` file: `base64 -w0 pomodromo.jks` |
-| `SIGNING_KEY_ALIAS` | Whatever you passed to `keytool -alias` (e.g. `aod-pomodromo`) |
+| `SIGNING_KEY` | Base64 of the `.jks` file: `base64 -w0 pomodoro.jks` |
+| `SIGNING_KEY_ALIAS` | Whatever you passed to `keytool -alias` (e.g. `aod-pomodoro`) |
 | `SIGNING_STORE_PASSWORD` | Password you entered for the keystore |
 | `SIGNING_KEY_PASSWORD` | Password for the key (often the same as store) |
 
 Keystore generation (do this on your own machine, **not** in CI):
 ```bash
 keytool -genkeypair -v \
-  -keystore pomodromo.jks \
-  -alias aod-pomodromo \
+  -keystore pomodoro.jks \
+  -alias aod-pomodoro \
   -keyalg RSA -keysize 4096 -validity 10000
-base64 -w0 pomodromo.jks > pomodromo.jks.b64   # copy this whole line into SIGNING_KEY
+base64 -w0 pomodoro.jks > pomodoro.jks.b64   # copy this whole line into SIGNING_KEY
 ```
-Keep `pomodromo.jks` and `pomodromo.jks.b64` backed up securely; do not commit them.
+Keep `pomodoro.jks` and `pomodoro.jks.b64` backed up securely; do not commit them.
 
 ## Known gaps / open work
 

@@ -17,7 +17,7 @@
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Pomodromo"
+        android:theme="@style/Theme.Pomodoro"
         tools:targetApi="35">
 
         <activity

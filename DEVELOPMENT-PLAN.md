@@ -1,4 +1,4 @@
-# AOD Pomodromo — Development Plan
+# AOD Pomodoro — Development Plan
 
 **Document:** Development plan & architecture blueprint
 **Scope:** Always-On-Display-style Pomodoro timer for Android
@@ -70,7 +70,7 @@ Media (ExoPlayer/Media3) ──> ambient playback + media session
 Packages enforce boundaries. Multi-module is rejected for this scope; a pure-JVM `:core-timer` split *may* be added later purely for test speed.
 
 ```
-com.aod.pomodromo
+com.algosculptor.pomodoro
 ├── core/
 │   ├── di/                  # Hilt modules: CoreModule, DataModule, MediaModule
 │   └── util/                # Formatters, tick helpers, result wrappers
