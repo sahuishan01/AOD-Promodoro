@@ -36,22 +36,22 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          mkdir -p "$RUNNER_TEMP"
+          mkdir -p "app/keystore"
           STORE_PASS="${SIGNING_STORE_PASSWORD:-androidpassword}"
           KEY_ALIAS="${SIGNING_KEY_ALIAS:-pomodoro}"
           KEY_PASS="${SIGNING_KEY_PASSWORD:-androidpassword}"
 
           if [ -n "${SIGNING_KEY:-}" ]; then
-            echo "$SIGNING_KEY" | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null || true
-            if ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$STORE_PASS" > /dev/null 2>&1; then
+            echo "$SIGNING_KEY" | tr -d '\r\n ' | base64 -d > "app/keystore/release.jks" 2>/dev/null || true
+            if ! keytool -list -keystore "app/keystore/release.jks" -storepass "$STORE_PASS" > /dev/null 2>&1; then
               echo "Decoded keystore verification failed. Regenerating fallback..."
-              rm -f "$RUNNER_TEMP/release.jks"
+              rm -f "app/keystore/release.jks"
             fi
           fi
 
-          if [ ! -s "$RUNNER_TEMP/release.jks" ]; then
+          if [ ! -s "app/keystore/release.jks" ]; then
             echo "Generating valid release signing keystore..."
-            keytool -genkeypair -v -keystore "$RUNNER_TEMP/release.jks" \
+            keytool -genkeypair -v -keystore "app/keystore/release.jks" \
               -alias "$KEY_ALIAS" \
               -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass "$STORE_PASS" \
@@ -59,7 +59,6 @@ jobs:
               -dname "CN=AlgoSculptor, OU=Mobile, O=AlgoSculptor, L=SF, ST=CA, C=US"
           fi
 
-          echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
           echo "SIGNING_STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
           echo "SIGNING_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "SIGNING_KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
@@ -72,7 +71,6 @@ jobs:
 
       - name: Assemble release APK
         env:
-          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
           SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
           SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
@@ -80,7 +78,6 @@ jobs:
 
       - name: Bundle release AAB
         env:
-          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
           SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
           SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
