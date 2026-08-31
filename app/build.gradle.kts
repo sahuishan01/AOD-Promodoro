@@ -24,7 +24,7 @@ android {
             val envPass = System.getenv("SIGNING_STORE_PASSWORD")?.takeIf { it.isNotEmpty() } ?: "androidpassword"
             val envAlias = System.getenv("SIGNING_KEY_ALIAS")?.takeIf { it.isNotEmpty() } ?: "pomodoro"
             val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD")?.takeIf { it.isNotEmpty() } ?: "androidpassword"
-            val kFile = if (envPath.isNotEmpty()) java.io.File(envPath) else rootProject.file("app/keystore/release.jks")
+            val kFile = if (envPath.isNotEmpty()) file(envPath) else file("keystore/release.jks")
             if (kFile.exists() && kFile.length() > 0L) {
                 storeFile = kFile
                 storePassword = envPass
