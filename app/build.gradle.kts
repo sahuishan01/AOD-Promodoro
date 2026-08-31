@@ -14,18 +14,24 @@ android {
         applicationId = "com.algosculptor.pomodoro"
         minSdk = 34
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.2.4"
+        versionCode = 7
+        versionName = "0.2.5"
     }
 
     signingConfigs {
         create("release") {
-            val path = System.getenv("KEYSTORE_PATH") ?: ""
-            if (path.isNotEmpty() && file(path).exists() && file(path).length() > 0L) {
-                storeFile = file(path)
+            val envPath = System.getenv("KEYSTORE_PATH") ?: ""
+            if (envPath.isNotEmpty() && file(envPath).exists() && file(envPath).length() > 0L) {
+                storeFile = file(envPath)
                 storePassword = System.getenv("SIGNING_STORE_PASSWORD")
                 keyAlias = System.getenv("SIGNING_KEY_ALIAS")
                 keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            } else {
+                // Built-in persistent project release keystore ensures all CI builds share the identical signature
+                storeFile = file("keystore/release.jks")
+                storePassword = "androidpassword"
+                keyAlias = "pomodoro"
+                keyPassword = "androidpassword"
             }
         }
     }
@@ -33,6 +39,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("release")
         }
         release {
             isMinifyEnabled = true
@@ -41,12 +48,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            val path = System.getenv("KEYSTORE_PATH") ?: ""
-            if (path.isNotEmpty() && file(path).exists() && file(path).length() > 0L && System.getenv("SIGNING_KEY_ALIAS")?.isNotEmpty() == true) {
-                signingConfig = signingConfigs.getByName("release")
-            } else {
-                signingConfig = signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

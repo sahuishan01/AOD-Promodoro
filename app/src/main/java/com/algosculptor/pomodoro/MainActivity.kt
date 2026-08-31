@@ -28,6 +28,7 @@ import com.algosculptor.pomodoro.ui.theme.PomodoroTheme
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -136,18 +137,33 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(showWhenLocked)
             setTurnScreenOn(turnScreenOn)
+        }
+        @Suppress("DEPRECATION")
+        if (showWhenLocked) {
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
+            )
         } else {
-            @Suppress("DEPRECATION")
-            if (showWhenLocked) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
-            } else {
-                window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
-            }
-            @Suppress("DEPRECATION")
-            if (turnScreenOn) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
-            } else {
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+            window.clearFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
+            )
+        }
+        @Suppress("DEPRECATION")
+        if (turnScreenOn) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            val settings = settingsRepository.settings.first()
+            if (settings.keepScreenOn) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
     }

@@ -1,13 +1,13 @@
 package com.algosculptor.pomodoro.media
 
-import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
-import androidx.core.content.ContextCompat
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
-import androidx.media3.session.MediaController
-import androidx.media3.session.SessionToken
+import androidx.media3.exoplayer.ExoPlayer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,12 +20,11 @@ import javax.inject.Singleton
 data class PlaybackUiState(
     val isPlaying: Boolean = false,
     val volume: Float = 0.6f,
-    val activeSource: String? = null, // opaque tag: "bundled:<id>" or "picked"
+    val activeSource: String? = null,
 )
 
 /**
- * Thin facade over a Media3 [MediaController] connected to [AmbientPlaybackService].
- * UI never touches the player directly.
+ * Dedicated ambient audio engine backed directly by ExoPlayer with audio focus management.
  */
 @Singleton
 class PlaybackController @Inject constructor(
@@ -34,70 +33,84 @@ class PlaybackController @Inject constructor(
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
 
-    private var controller: MediaController? = null
+    private val player: ExoPlayer by lazy {
+        ExoPlayer.Builder(context)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .setUsage(C.USAGE_MEDIA)
+                    .build(),
+                true, // handleAudioFocus
+            )
+            .build()
+            .apply {
+                repeatMode = Player.REPEAT_MODE_ONE
+                addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        _state.update { it.copy(isPlaying = isPlaying) }
+                    }
 
-    private val listener = object : Player.Listener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            _state.update { it.copy(isPlaying = isPlaying) }
-        }
+                    override fun onVolumeChanged(volume: Float) {
+                        _state.update { it.copy(volume = volume) }
+                    }
 
-        override fun onVolumeChanged(volume: Float) {
-            _state.update { it.copy(volume = volume) }
-        }
-    }
-
-    /** Idempotent connect; safe to call from any screen. */
-    fun connect(onReady: (() -> Unit)? = null) {
-        if (controller != null) {
-            onReady?.invoke()
-            return
-        }
-        val token = SessionToken(context, ComponentName(context, AmbientPlaybackService::class.java))
-        val future = MediaController.Builder(context, token).buildAsync()
-        future.addListener({
-            try {
-                controller = future.get().also { c ->
-                    c.addListener(listener)
-                    _state.update { it.copy(isPlaying = c.isPlaying, volume = c.volume) }
-                }
-                onReady?.invoke()
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to connect to AmbientPlaybackService")
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        Timber.e(error, "ExoPlayer playback error")
+                    }
+                })
             }
-        }, ContextCompat.getMainExecutor(context))
     }
 
     fun play(uri: Uri, sourceTag: String, volume: Float) {
-        connect {
-            controller?.let { c ->
-                c.setMediaItem(MediaItem.fromUri(uri))
-                c.volume = volume.coerceIn(0f, 1f)
-                c.prepare()
-                c.play()
-                _state.update { it.copy(activeSource = sourceTag, volume = c.volume, isPlaying = true) }
-            }
+        try {
+            val mediaItem = MediaItem.Builder()
+                .setUri(uri)
+                .setMimeType(MimeTypes.AUDIO_WAV)
+                .build()
+            player.setMediaItem(mediaItem)
+            player.volume = volume.coerceIn(0f, 1f)
+            player.prepare()
+            player.play()
+            _state.update { it.copy(activeSource = sourceTag, volume = player.volume, isPlaying = true) }
+        } catch (e: Exception) {
+            Timber.e(e, "Error playing audio from $uri")
         }
     }
 
     fun pause() {
-        controller?.pause()
+        try {
+            player.pause()
+            _state.update { it.copy(isPlaying = false) }
+        } catch (e: Exception) {
+            Timber.e(e, "Error pausing audio")
+        }
     }
 
     fun stop() {
-        controller?.let { c ->
-            c.stop()
-            c.clearMediaItems()
+        try {
+            player.stop()
+            player.clearMediaItems()
+            _state.update { it.copy(isPlaying = false, activeSource = null) }
+        } catch (e: Exception) {
+            Timber.e(e, "Error stopping audio")
         }
-        _state.update { it.copy(isPlaying = false, activeSource = null) }
     }
 
     fun setVolume(volume: Float) {
-        controller?.volume = volume.coerceIn(0f, 1f)
+        try {
+            val v = volume.coerceIn(0f, 1f)
+            player.volume = v
+            _state.update { it.copy(volume = v) }
+        } catch (e: Exception) {
+            Timber.e(e, "Error setting volume")
+        }
     }
 
     fun release() {
-        controller?.removeListener(listener)
-        controller?.release()
-        controller = null
+        try {
+            player.release()
+        } catch (e: Exception) {
+            Timber.e(e, "Error releasing player")
+        }
     }
 }
