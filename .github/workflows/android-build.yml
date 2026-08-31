@@ -29,24 +29,24 @@ jobs:
       - name: Bootstrap Gradle wrapper
         run: gradle wrapper --gradle-version 8.9 --distribution-type bin
 
-      - name: Unit tests (timer engine, policy)
-        run: ./gradlew testDebugUnitTest --console=plain
-
-      - name: Assemble debug APK
-        run: ./gradlew assembleDebug --console=plain
-
-      - name: Decode signing keystore from Secrets
+      - name: Decode signing keystore from Secrets (if configured)
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
           if [ -n "${SIGNING_KEY:-}" ]; then
             mkdir -p "$RUNNER_TEMP"
-            echo "$SIGNING_KEY" | base64 -di > "$RUNNER_TEMP/release.jks"
+            echo "$SIGNING_KEY" | base64 -di > "$RUNNER_TEMP/release.jks" 2>/dev/null || true
             if [ -s "$RUNNER_TEMP/release.jks" ]; then
               echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
               echo "Keystore decoded successfully from GitHub Secrets."
             fi
           fi
+
+      - name: Unit tests (timer engine, policy)
+        run: ./gradlew testDebugUnitTest --console=plain
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDebug --console=plain
 
       - name: Assemble & bundle release
         env:
