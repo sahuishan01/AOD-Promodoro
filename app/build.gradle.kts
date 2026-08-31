@@ -21,14 +21,17 @@ android {
     signingConfigs {
         create("release") {
             val envPath = System.getenv("KEYSTORE_PATH") ?: ""
-            if (envPath.isNotEmpty() && file(envPath).exists() && file(envPath).length() > 0L) {
+            val envPass = System.getenv("SIGNING_STORE_PASSWORD") ?: ""
+            val envAlias = System.getenv("SIGNING_KEY_ALIAS") ?: ""
+            val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD") ?: ""
+            if (envPath.isNotEmpty() && file(envPath).exists() && file(envPath).length() > 0L && envPass.isNotEmpty()) {
                 storeFile = file(envPath)
-                storePassword = System.getenv("SIGNING_STORE_PASSWORD")
-                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
-                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+                storePassword = envPass
+                keyAlias = envAlias
+                keyPassword = envKeyPass
             } else {
                 // Built-in persistent project release keystore ensures all CI builds share the identical signature
-                storeFile = file("keystore/release.jks")
+                storeFile = rootProject.file("app/keystore/release.jks")
                 storePassword = "androidpassword"
                 keyAlias = "pomodoro"
                 keyPassword = "androidpassword"
