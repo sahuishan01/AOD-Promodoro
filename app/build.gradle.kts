@@ -50,8 +50,10 @@ android {
                 "proguard-rules.pro"
             )
             val relConfig = signingConfigs.findByName("release")
-            if (relConfig?.storeFile != null && relConfig.storeFile!!.exists()) {
+            if (relConfig != null && relConfig.storeFile != null && relConfig.storeFile!!.exists()) {
                 signingConfig = relConfig
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
             }
         }
     }
