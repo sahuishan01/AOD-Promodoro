@@ -55,13 +55,14 @@ jobs:
               -alias "$KEY_ALIAS" \
               -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass "$STORE_PASS" \
-              -keypass "$KEY_PASS" \
+              -keypass "$STORE_PASS" \
+              -storetype JKS \
               -dname "CN=AlgoSculptor, OU=Mobile, O=AlgoSculptor, L=SF, ST=CA, C=US"
           fi
 
           echo "SIGNING_STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
           echo "SIGNING_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-          echo "SIGNING_KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
 
       - name: Unit tests (timer engine, policy)
         run: ./gradlew testDebugUnitTest --console=plain
@@ -74,14 +75,14 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
           SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --console=plain --stacktrace
+        run: ./gradlew assembleRelease --console=plain --info --stacktrace
 
       - name: Bundle release AAB
         env:
           SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
           SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
-        run: ./gradlew bundleRelease --console=plain --stacktrace
+        run: ./gradlew bundleRelease --console=plain --info --stacktrace
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
