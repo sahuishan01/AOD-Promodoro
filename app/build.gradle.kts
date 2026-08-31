@@ -21,19 +21,19 @@ android {
     signingConfigs {
         create("release") {
             val envPath = System.getenv("KEYSTORE_PATH") ?: ""
-            val envPass = System.getenv("SIGNING_STORE_PASSWORD") ?: ""
-            val envAlias = System.getenv("SIGNING_KEY_ALIAS") ?: ""
-            val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD") ?: ""
-            if (envPath.isNotEmpty() && file(envPath).exists() && envPass.isNotEmpty()) {
+            val envPass = System.getenv("SIGNING_STORE_PASSWORD") ?: "androidpassword"
+            val envAlias = System.getenv("SIGNING_KEY_ALIAS") ?: "pomodoro"
+            val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD") ?: "androidpassword"
+            if (envPath.isNotEmpty() && file(envPath).exists()) {
                 storeFile = file(envPath)
                 storePassword = envPass
                 keyAlias = envAlias
                 keyPassword = envKeyPass
             } else if (file("keystore/release.jks").exists()) {
                 storeFile = file("keystore/release.jks")
-                storePassword = "androidpassword"
-                keyAlias = "pomodoro"
-                keyPassword = "androidpassword"
+                storePassword = envPass
+                keyAlias = envAlias
+                keyPassword = envKeyPass
             }
         }
     }
@@ -50,10 +50,8 @@ android {
                 "proguard-rules.pro"
             )
             val relConfig = signingConfigs.findByName("release")
-            if (relConfig != null && relConfig.storeFile != null && relConfig.storeFile!!.exists()) {
+            if (relConfig?.storeFile != null && relConfig.storeFile!!.exists()) {
                 signingConfig = relConfig
-            } else {
-                signingConfig = signingConfigs.getByName("debug")
             }
         }
     }

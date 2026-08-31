@@ -29,18 +29,30 @@ jobs:
       - name: Bootstrap Gradle wrapper
         run: gradle wrapper --gradle-version 8.9 --distribution-type bin
 
-      - name: Decode signing keystore from Secrets (if configured)
+      - name: Setup release signing keystore
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
+          mkdir -p "$RUNNER_TEMP"
           if [ -n "${SIGNING_KEY:-}" ]; then
-            mkdir -p "$RUNNER_TEMP"
             echo "$SIGNING_KEY" | base64 -di > "$RUNNER_TEMP/release.jks" 2>/dev/null || true
-            if [ -s "$RUNNER_TEMP/release.jks" ]; then
-              echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-              echo "Keystore decoded successfully from GitHub Secrets."
-            fi
           fi
+          if [ ! -s "$RUNNER_TEMP/release.jks" ]; then
+            echo "Generating automated release signing keystore..."
+            keytool -genkeypair -v -keystore "$RUNNER_TEMP/release.jks" \
+              -alias "${SIGNING_KEY_ALIAS:-pomodoro}" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "${SIGNING_STORE_PASSWORD:-androidpassword}" \
+              -keypass "${SIGNING_KEY_PASSWORD:-androidpassword}" \
+              -dname "CN=AlgoSculptor, OU=Mobile, O=AlgoSculptor, L=SF, ST=CA, C=US"
+          fi
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          echo "SIGNING_STORE_PASSWORD=${SIGNING_STORE_PASSWORD:-androidpassword}" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_ALIAS=${SIGNING_KEY_ALIAS:-pomodoro}" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_PASSWORD=${SIGNING_KEY_PASSWORD:-androidpassword}" >> "$GITHUB_ENV"
 
       - name: Unit tests (timer engine, policy)
         run: ./gradlew testDebugUnitTest --console=plain
