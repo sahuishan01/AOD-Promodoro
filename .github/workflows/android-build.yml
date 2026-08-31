@@ -35,26 +35,8 @@ jobs:
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --console=plain
 
-      - name: Decode signing keystore (if secret configured)
-        env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-        run: |
-          if [ -n "${SIGNING_KEY:-}" ]; then
-            echo "$SIGNING_KEY" | base64 -di > "$RUNNER_TEMP/pomodoro.jks" 2>/dev/null || true
-            if [ -s "$RUNNER_TEMP/pomodoro.jks" ]; then
-              echo "KEYSTORE_PATH=$RUNNER_TEMP/pomodoro.jks" >> "$GITHUB_ENV"
-              echo "External keystore decoded successfully."
-            fi
-          fi
-
       - name: Assemble & bundle release
-        env:
-          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-        run: |
-          ./gradlew bundleRelease assembleRelease --console=plain --stacktrace
+        run: ./gradlew bundleRelease assembleRelease --console=plain --stacktrace
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
