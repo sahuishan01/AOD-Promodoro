@@ -37,22 +37,32 @@ jobs:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           mkdir -p "$RUNNER_TEMP"
+          STORE_PASS="${SIGNING_STORE_PASSWORD:-androidpassword}"
+          KEY_ALIAS="${SIGNING_KEY_ALIAS:-pomodoro}"
+          KEY_PASS="${SIGNING_KEY_PASSWORD:-androidpassword}"
+
           if [ -n "${SIGNING_KEY:-}" ]; then
-            echo "$SIGNING_KEY" | base64 -di > "$RUNNER_TEMP/release.jks" 2>/dev/null || true
+            echo "$SIGNING_KEY" | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/release.jks" 2>/dev/null || true
+            if ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$STORE_PASS" > /dev/null 2>&1; then
+              echo "Decoded keystore verification failed. Regenerating fallback..."
+              rm -f "$RUNNER_TEMP/release.jks"
+            fi
           fi
+
           if [ ! -s "$RUNNER_TEMP/release.jks" ]; then
-            echo "Generating automated release signing keystore..."
+            echo "Generating valid release signing keystore..."
             keytool -genkeypair -v -keystore "$RUNNER_TEMP/release.jks" \
-              -alias "${SIGNING_KEY_ALIAS:-pomodoro}" \
+              -alias "$KEY_ALIAS" \
               -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "${SIGNING_STORE_PASSWORD:-androidpassword}" \
-              -keypass "${SIGNING_KEY_PASSWORD:-androidpassword}" \
+              -storepass "$STORE_PASS" \
+              -keypass "$KEY_PASS" \
               -dname "CN=AlgoSculptor, OU=Mobile, O=AlgoSculptor, L=SF, ST=CA, C=US"
           fi
+
           echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-          echo "SIGNING_STORE_PASSWORD=${SIGNING_STORE_PASSWORD:-androidpassword}" >> "$GITHUB_ENV"
-          echo "SIGNING_KEY_ALIAS=${SIGNING_KEY_ALIAS:-pomodoro}" >> "$GITHUB_ENV"
-          echo "SIGNING_KEY_PASSWORD=${SIGNING_KEY_PASSWORD:-androidpassword}" >> "$GITHUB_ENV"
+          echo "SIGNING_STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
 
       - name: Unit tests (timer engine, policy)
         run: ./gradlew testDebugUnitTest --console=plain
@@ -60,14 +70,21 @@ jobs:
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --console=plain
 
-      - name: Assemble & bundle release
+      - name: Assemble release APK
         env:
           KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
           SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
           SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
-        run: |
-          ./gradlew bundleRelease assembleRelease --console=plain --stacktrace
+        run: ./gradlew assembleRelease --console=plain --stacktrace
+
+      - name: Bundle release AAB
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
+          SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease --console=plain --stacktrace
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
