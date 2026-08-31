@@ -17,11 +17,11 @@ private val AodDarkScheme = darkColorScheme(
     onSecondary = Color(0xFF0B0E14),
     background = Color(0xFF0B0E14),
     onBackground = Color(0xFFF5F1E3),
-    surface = Color(0xFF12161F),
+    surface = Color(0xFF141923),
     onSurface = Color(0xFFF5F1E3),
-    surfaceVariant = Color(0xFF1C2230),
-    onSurfaceVariant = Color(0xFFC9C3B4),
-    outline = Color(0xFF3A4254),
+    surfaceVariant = Color(0xFF1F2636),
+    onSurfaceVariant = Color(0xFFD4CEC1),
+    outline = Color(0xFF4A5568),
 )
 
 @Composable

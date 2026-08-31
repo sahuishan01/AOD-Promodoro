@@ -3,16 +3,17 @@ package com.algosculptor.pomodoro.media
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,12 +55,16 @@ class PlaybackController @Inject constructor(
         val token = SessionToken(context, ComponentName(context, AmbientPlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener({
-            controller = future.get().also { c ->
-                c.addListener(listener)
-                _state.update { it.copy(isPlaying = c.isPlaying, volume = c.volume) }
+            try {
+                controller = future.get().also { c ->
+                    c.addListener(listener)
+                    _state.update { it.copy(isPlaying = c.isPlaying, volume = c.volume) }
+                }
+                onReady?.invoke()
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to connect to AmbientPlaybackService")
             }
-            onReady?.invoke()
-        }, MoreExecutors.directExecutor())
+        }, ContextCompat.getMainExecutor(context))
     }
 
     fun play(uri: Uri, sourceTag: String, volume: Float) {
@@ -69,7 +74,7 @@ class PlaybackController @Inject constructor(
                 c.volume = volume.coerceIn(0f, 1f)
                 c.prepare()
                 c.play()
-                _state.update { it.copy(activeSource = sourceTag, volume = c.volume) }
+                _state.update { it.copy(activeSource = sourceTag, volume = c.volume, isPlaying = true) }
             }
         }
     }

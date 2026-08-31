@@ -49,6 +49,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.material3.Surface
+
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -75,123 +79,149 @@ fun SettingsScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.settings_back),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                stringResource(R.string.settings_title),
-                style = MaterialTheme.typography.headlineMedium,
-            )
-        }
-        Spacer(Modifier.height(24.dp))
-
-        SectionTitle(stringResource(R.string.settings_work_duration))
-        DurationSlider(
-            value = settings.workMinutes,
-            range = 1..120,
-            onChange = viewModel::setWorkMinutes,
-        )
-        SectionTitle(stringResource(R.string.settings_rest_duration))
-        DurationSlider(
-            value = settings.restMinutes,
-            range = 1..60,
-            onChange = viewModel::setRestMinutes,
-        )
-
-        Spacer(Modifier.height(24.dp))
-        SectionTitle(stringResource(R.string.settings_background))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(BackgroundCatalog.all) { bg ->
-                val selected = settings.backgroundId == "bundled:${bg.id}"
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { viewModel.selectBundledBackground(bg.id) },
-                ) {
-                    Box(
-                        Modifier
-                            .size(56.dp)
-                            .background(
-                                bg.toBrush(),
-                                shape = CircleShape,
-                            ),
-                    )
-                    Text(
-                        bg.displayName,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.settings_back),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.settings_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
-        }
-        Spacer(Modifier.height(12.dp))
-        Button(onClick = {
-            imagePicker.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-            )
-        }) {
-            Text(stringResource(R.string.settings_pick_image), style = MaterialTheme.typography.labelLarge)
-        }
+            Spacer(Modifier.height(24.dp))
 
-        Spacer(Modifier.height(24.dp))
-        SectionTitle(stringResource(R.string.settings_audio))
-        AudioOption(
-            label = stringResource(R.string.settings_audio_none),
-            selected = settings.audioSelection == "off",
-            onSelect = viewModel::selectAudioOff,
-        )
-        viewModel.bundledTracks.forEach { track ->
+            SectionTitle(stringResource(R.string.settings_work_duration))
+            DurationSlider(
+                value = settings.workMinutes,
+                range = 1..120,
+                onChange = viewModel::setWorkMinutes,
+            )
+            SectionTitle(stringResource(R.string.settings_rest_duration))
+            DurationSlider(
+                value = settings.restMinutes,
+                range = 1..60,
+                onChange = viewModel::setRestMinutes,
+            )
+
+            Spacer(Modifier.height(24.dp))
+            SectionTitle(stringResource(R.string.settings_background))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(BackgroundCatalog.all) { bg ->
+                    val selected = settings.backgroundId == "bundled:${bg.id}"
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { viewModel.selectBundledBackground(bg.id) },
+                    ) {
+                        Box(
+                            Modifier
+                                .size(56.dp)
+                                .then(
+                                    if (selected) Modifier.border(
+                                        BorderStroke(3.dp, MaterialTheme.colorScheme.primary),
+                                        shape = CircleShape,
+                                    ) else Modifier
+                                )
+                                .padding(if (selected) 4.dp else 0.dp)
+                                .background(
+                                    bg.toBrush(),
+                                    shape = CircleShape,
+                                ),
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            bg.displayName,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = {
+                imagePicker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                )
+            }) {
+                Text(
+                    stringResource(R.string.settings_pick_image),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
+            SectionTitle(stringResource(R.string.settings_audio))
             AudioOption(
-                label = stringResource(track.titleRes),
-                selected = settings.audioSelection == "bundled:${track.id}",
-                onSelect = { viewModel.selectBundledTrack(track) },
+                label = stringResource(R.string.settings_audio_none),
+                selected = settings.audioSelection == "off",
+                onSelect = viewModel::selectAudioOff,
             )
-        }
-        Button(onClick = { audioPicker.launch(arrayOf("audio/*")) }) {
-            Text(stringResource(R.string.settings_pick_audio), style = MaterialTheme.typography.labelLarge)
-        }
+            viewModel.bundledTracks.forEach { track ->
+                AudioOption(
+                    label = stringResource(track.titleRes),
+                    selected = settings.audioSelection == "bundled:${track.id}",
+                    onSelect = { viewModel.selectBundledTrack(track) },
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { audioPicker.launch(arrayOf("audio/*")) }) {
+                Text(
+                    stringResource(R.string.settings_pick_audio),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
 
-        Spacer(Modifier.height(24.dp))
-        SectionTitle(stringResource(R.string.settings_volume))
-        Slider(
-            value = settings.volume,
-            onValueChange = viewModel::setVolume,
-        )
+            Spacer(Modifier.height(24.dp))
+            SectionTitle(stringResource(R.string.settings_volume))
+            Slider(
+                value = settings.volume,
+                onValueChange = viewModel::setVolume,
+            )
 
-        Spacer(Modifier.height(24.dp))
-        ToggleRow(
-            label = stringResource(R.string.settings_keep_screen_on),
-            checked = settings.keepScreenOn,
-            onChange = viewModel::setKeepScreenOn,
-        )
-        ToggleRow(
-            label = stringResource(R.string.settings_show_when_locked),
-            checked = settings.showWhenLocked,
-            onChange = viewModel::setShowWhenLocked,
-        )
-        ToggleRow(
-            label = stringResource(R.string.settings_auto_dim),
-            checked = settings.autoDimEnabled,
-            onChange = viewModel::setAutoDim,
-        )
-        ToggleRow(
-            label = stringResource(R.string.settings_haptics),
-            checked = settings.hapticsEnabled,
-            onChange = viewModel::setHaptics,
-        )
+            Spacer(Modifier.height(24.dp))
+            ToggleRow(
+                label = stringResource(R.string.settings_keep_screen_on),
+                checked = settings.keepScreenOn,
+                onChange = viewModel::setKeepScreenOn,
+            )
+            ToggleRow(
+                label = stringResource(R.string.settings_show_when_locked),
+                checked = settings.showWhenLocked,
+                onChange = viewModel::setShowWhenLocked,
+            )
+            ToggleRow(
+                label = stringResource(R.string.settings_auto_dim),
+                checked = settings.autoDimEnabled,
+                onChange = viewModel::setAutoDim,
+            )
+            ToggleRow(
+                label = stringResource(R.string.settings_haptics),
+                checked = settings.hapticsEnabled,
+                onChange = viewModel::setHaptics,
+            )
+            Spacer(Modifier.height(32.dp))
+        }
     }
 }
 
@@ -214,9 +244,11 @@ private fun DurationSlider(value: Int, range: IntRange, onChange: (Int) -> Unit)
             valueRange = range.first.toFloat()..range.last.toFloat(),
             modifier = Modifier.weight(1f),
         )
+        Spacer(Modifier.width(12.dp))
         Text(
             stringResource(R.string.settings_minutes_format, value),
             style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(72.dp),
         )
     }
@@ -228,10 +260,16 @@ private fun AudioOption(label: String, selected: Boolean, onSelect: () -> Unit) 
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onSelect),
+            .clickable(onClick = onSelect)
+            .padding(vertical = 4.dp),
     ) {
         RadioButton(selected = selected, onClick = onSelect)
-        Text(label, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -239,11 +277,14 @@ private fun AudioOption(label: String, selected: Boolean, onSelect: () -> Unit) 
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
     ) {
         Text(
             label,
             style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f),
         )
         Switch(checked = checked, onCheckedChange = onChange)

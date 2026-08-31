@@ -14,7 +14,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlin.random.Random
 
@@ -29,6 +30,7 @@ fun AodClock(
     contentDescription: String,
     dimmed: Boolean,
     modifier: Modifier = Modifier,
+    fontSize: TextUnit = 96.sp,
 ) {
     var shift by remember { mutableStateOf(IntOffset(0, 0)) }
     LaunchedEffect(Unit) {
@@ -43,7 +45,7 @@ fun AodClock(
 
     Text(
         text = text,
-        style = MaterialTheme.typography.displayLarge,
+        style = MaterialTheme.typography.displayLarge.copy(fontSize = fontSize),
         color = MaterialTheme.colorScheme.onBackground,
         modifier = modifier
             .offset { shift }

@@ -10,8 +10,15 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import android.content.pm.ActivityInfo
+import android.hardware.SensorManager
 import android.os.Build
+import android.view.OrientationEventListener
 import android.view.WindowManager
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import com.algosculptor.pomodoro.data.settings.SettingsRepository
 import com.algosculptor.pomodoro.service.TimerForegroundService
 import com.algosculptor.pomodoro.timer.TimerEngine
@@ -31,6 +38,8 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var engine: TimerEngine
     @Inject lateinit var settingsRepository: SettingsRepository
 
+    private var orientationListener: OrientationEventListener? = null
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { /* FGS still ticks if denied; fall back silently per plan §Phase 6. */ }
@@ -41,6 +50,10 @@ class MainActivity : ComponentActivity() {
 
         // Enable show over lock screen and turn screen on programmatically
         configureLockScreenAndScreenOn(showWhenLocked = true, turnScreenOn = true)
+
+        // Setup hardware sensor orientation listener so the desk timer auto-rotates
+        // even if system auto-rotate lock is enabled.
+        setupAutoRotateListener()
 
         // Observe user settings to dynamically control AOD keep-screen-on and lock screen visibility
         lifecycleScope.launch {
@@ -73,7 +86,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             PomodoroTheme {
-                AppNav()
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                ) {
+                    AppNav()
+                }
             }
         }
 
@@ -84,6 +103,32 @@ class MainActivity : ComponentActivity() {
         // (e.g., activity recreated after process restore).
         if (engine.snapshot.value.phase.isRunning) {
             TimerForegroundService.start(this)
+        }
+    }
+
+    private fun setupAutoRotateListener() {
+        orientationListener = object : OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
+            private var lastOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+
+                val targetOrientation = when {
+                    orientation in 60..120 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                    orientation in 240..300 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    orientation in 330..359 || orientation in 0..30 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    orientation in 150..210 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+                    else -> lastOrientation
+                }
+
+                if (targetOrientation != lastOrientation && targetOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+                    lastOrientation = targetOrientation
+                    requestedOrientation = targetOrientation
+                }
+            }
+        }
+        if (orientationListener?.canDetectOrientation() == true) {
+            orientationListener?.enable()
         }
     }
 
@@ -108,6 +153,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        orientationListener?.disable()
         if (!engine.snapshot.value.phase.isRunning) {
             TimerForegroundService.stop(this)
         }

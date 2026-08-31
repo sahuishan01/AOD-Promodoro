@@ -7,6 +7,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import androidx.media3.datasource.RawResourceDataSource
+
 data class BundledTrack(
     val id: String,
     val titleRes: Int,
@@ -26,5 +28,5 @@ class AmbientAudioRepository @Inject constructor(
     fun byId(id: String): BundledTrack? = tracks.find { it.id == id }
 
     fun uriFor(track: BundledTrack): Uri =
-        Uri.parse("android.resource://${context.packageName}/${track.rawRes}")
+        RawResourceDataSource.buildRawResourceUri(track.rawRes)
 }

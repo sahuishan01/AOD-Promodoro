@@ -44,10 +44,36 @@ class TimerViewModel @Inject constructor(
         TimerUiState(snap, settings, playbackState.isPlaying)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TimerUiState())
 
-    fun start() = engine.start()
-    fun pause() = engine.pause()
-    fun resume() = engine.resume()
-    fun reset() = engine.reset()
+    fun start() {
+        engine.start()
+        viewModelScope.launch {
+            val s = settingsRepository.settings.first()
+            if (s.audioSelection != "off") {
+                applyAudioSelection(s)
+            }
+        }
+    }
+
+    fun pause() {
+        engine.pause()
+        playback.pause()
+    }
+
+    fun resume() {
+        engine.resume()
+        viewModelScope.launch {
+            val s = settingsRepository.settings.first()
+            if (s.audioSelection != "off") {
+                applyAudioSelection(s)
+            }
+        }
+    }
+
+    fun reset() {
+        engine.reset()
+        playback.stop()
+    }
+
     fun skip() = engine.skipPhase()
 
     fun applyAudioSelection(settings: AppSettings) {
@@ -65,10 +91,22 @@ class TimerViewModel @Inject constructor(
     }
 
     fun toggleAudio() {
-        if (playback.state.value.isPlaying) playback.pause()
-        else viewModelScope.launch {
-            // Resume the persisted selection.
-            applyAudioSelection(settingsRepository.settings.first())
+        if (playback.state.value.isPlaying) {
+            playback.pause()
+        } else {
+            viewModelScope.launch {
+                val s = settingsRepository.settings.first()
+                if (s.audioSelection == "off") {
+                    val firstTrack = audioRepository.tracks.firstOrNull()
+                    if (firstTrack != null) {
+                        val tag = "bundled:${firstTrack.id}"
+                        settingsRepository.setAudioSelection(tag)
+                        playback.play(audioRepository.uriFor(firstTrack), tag, s.volume)
+                    }
+                } else {
+                    applyAudioSelection(s)
+                }
+            }
         }
     }
 

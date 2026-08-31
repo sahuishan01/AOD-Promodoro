@@ -27,6 +27,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -35,13 +36,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.content.res.Configuration
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.algosculptor.pomodoro.R
 import com.algosculptor.pomodoro.core.util.TimeFormatter
@@ -60,6 +64,7 @@ fun TimerScreen(
     val ui by viewModel.uiState.collectAsState()
     val view = LocalView.current
     val haptics = LocalHapticFeedback.current
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Screen stays on while this screen is composed and keepScreenOn is enabled.
     DisposableEffect(ui.settings.keepScreenOn) {
@@ -70,7 +75,9 @@ fun TimerScreen(
     // Haptic phase cue (opt-in).
     var lastPhase by remember { mutableStateOf(ui.snapshot.phase) }
     if (ui.settings.hapticsEnabled && ui.snapshot.phase != lastPhase) {
-        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        LaunchedEffect(ui.snapshot.phase) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
         lastPhase = ui.snapshot.phase
     }
 
@@ -90,51 +97,110 @@ fun TimerScreen(
     }
 
     BackgroundSurface(model = backgroundModel) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            PhaseBadge(ui.snapshot.phase)
-            Spacer(Modifier.height(16.dp))
+        if (isLandscape) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 48.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(1.1f),
+                ) {
+                    PhaseBadge(ui.snapshot.phase)
+                    Spacer(Modifier.height(8.dp))
+                    AodClock(
+                        text = TimeFormatter.formatClock(
+                            if (ui.snapshot.phase == TimerPhase.IDLE) ui.settings.workMinutes.minutes
+                            else ui.snapshot.remaining
+                        ),
+                        contentDescription = stringResource(R.string.cd_timer_clock),
+                        dimmed = dimmed,
+                        fontSize = 72.sp,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Cycle ${ui.snapshot.completedCycles + 1}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
-            AodClock(
-                text = TimeFormatter.formatClock(
-                    if (ui.snapshot.phase == TimerPhase.IDLE) ui.settings.workMinutes.minutes
-                    else ui.snapshot.remaining
-                ),
-                contentDescription = stringResource(R.string.cd_timer_clock),
-                dimmed = dimmed,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Cycle ${ui.snapshot.completedCycles + 1}",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(48.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(0.9f),
+                ) {
+                    ControlsRow(
+                        phase = ui.snapshot.phase,
+                        isPaused = ui.snapshot.isPaused,
+                        onStart = viewModel::start,
+                        onPause = viewModel::pause,
+                        onResume = viewModel::resume,
+                        onReset = viewModel::reset,
+                        onSkip = viewModel::skip,
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    VolumeRow(
+                        playing = ui.audioPlaying,
+                        volume = ui.settings.volume,
+                        onToggle = viewModel::toggleAudio,
+                        onVolume = viewModel::setVolume,
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                PhaseBadge(ui.snapshot.phase)
+                Spacer(Modifier.height(16.dp))
 
-            ControlsRow(
-                phase = ui.snapshot.phase,
-                isPaused = ui.snapshot.isPaused,
-                onStart = viewModel::start,
-                onPause = viewModel::pause,
-                onResume = viewModel::resume,
-                onReset = viewModel::reset,
-                onSkip = viewModel::skip,
-            )
-            Spacer(Modifier.height(32.dp))
+                AodClock(
+                    text = TimeFormatter.formatClock(
+                        if (ui.snapshot.phase == TimerPhase.IDLE) ui.settings.workMinutes.minutes
+                        else ui.snapshot.remaining
+                    ),
+                    contentDescription = stringResource(R.string.cd_timer_clock),
+                    dimmed = dimmed,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Cycle ${ui.snapshot.completedCycles + 1}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(48.dp))
 
-            VolumeRow(
-                playing = ui.audioPlaying,
-                volume = ui.settings.volume,
-                onToggle = viewModel::toggleAudio,
-                onVolume = viewModel::setVolume,
-            )
+                ControlsRow(
+                    phase = ui.snapshot.phase,
+                    isPaused = ui.snapshot.isPaused,
+                    onStart = viewModel::start,
+                    onPause = viewModel::pause,
+                    onResume = viewModel::resume,
+                    onReset = viewModel::reset,
+                    onSkip = viewModel::skip,
+                )
+                Spacer(Modifier.height(32.dp))
+
+                VolumeRow(
+                    playing = ui.audioPlaying,
+                    volume = ui.settings.volume,
+                    onToggle = viewModel::toggleAudio,
+                    onVolume = viewModel::setVolume,
+                )
+            }
         }
 
         IconButton(
