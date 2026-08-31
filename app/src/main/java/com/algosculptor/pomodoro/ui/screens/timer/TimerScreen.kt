@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
@@ -89,7 +91,11 @@ fun TimerScreen(
 
     BackgroundSurface(model = backgroundModel) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -135,12 +141,15 @@ fun TimerScreen(
             onClick = onOpenSettings,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(8.dp),
+                .statusBarsPadding()
+                .padding(12.dp)
+                .size(48.dp),
         ) {
             Icon(
                 Icons.Default.Settings,
                 contentDescription = stringResource(R.string.action_settings),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(28.dp),
             )
         }
     }
