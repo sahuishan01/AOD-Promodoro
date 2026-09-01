@@ -11,6 +11,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -125,5 +127,8 @@ jobs:
           echo "Files ready to publish:"
           ls -la dist/
 
-          gh release create "${{ github.ref_name }}" dist/* --title "AOD Pomodoro ${{ github.ref_name }}" --generate-notes || \
-          gh release upload "${{ github.ref_name }}" dist/* --clobber || true
+          gh release view "${{ github.ref_name }}" >/dev/null 2>&1 || \
+            gh release create "${{ github.ref_name }}" --title "AOD Pomodoro ${{ github.ref_name }}" --generate-notes --draft=false
+
+          gh release edit "${{ github.ref_name }}" --draft=false || true
+          gh release upload "${{ github.ref_name }}" dist/* --clobber
