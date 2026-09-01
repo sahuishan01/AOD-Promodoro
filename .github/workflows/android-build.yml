@@ -117,20 +117,16 @@ jobs:
           path: app/build/reports/tests/
           if-no-files-found: ignore
 
-      - name: Stage Release Assets
-        run: |
-          mkdir -p dist
-          find app/build/outputs -type f -name "*.apk" -not -path "*/baselineProfiles/*" -not -path "*/debug/*" -exec cp -v {} dist/app-release.apk ';'
-          find app/build/outputs -type f -name "*.aab" -not -path "*/baselineProfiles/*" -not -path "*/debug/*" -exec cp -v {} dist/app-release.aab ';'
-          find app/build/outputs -type f -name "*debug*.apk" -not -path "*/baselineProfiles/*" -exec cp -v {} dist/app-debug.apk ';'
-          echo "=== Verified Staged Artifacts ==="
-          ls -lh dist/
-
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
-            gh release create "${{ github.ref_name }}" --title "AOD Pomodoro ${{ github.ref_name }}" --generate-notes
+          mkdir -p dist
+          find app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -not -path "*/baselineProfiles/*" -exec cp -v {} dist/ ';'
+          echo "=== Staged files to publish ==="
+          ls -la dist/
 
-          gh release upload "${{ github.ref_name }}" dist/app-release.apk dist/app-release.aab dist/app-debug.apk --clobber
+          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
+            gh release create "${{ github.ref_name }}" --title "AOD Pomodoro ${{ github.ref_name }}" --notes "AOD Pomodoro ${{ github.ref_name }} Release"
+
+          gh release upload "${{ github.ref_name }}" dist/* --clobber
