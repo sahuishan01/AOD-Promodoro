@@ -133,7 +133,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/bundle/release/*.aab
+            dist/app-release.apk
+            dist/app-release.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
