@@ -44,6 +44,8 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var settingsRepository: SettingsRepository
 
     private var orientationListener: OrientationEventListener? = null
+    private var lastValidOrientation: Int = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    private var isImmersiveActive: Boolean = true
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -53,12 +55,28 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+
         // Enable show over lock screen and turn screen on programmatically
         configureLockScreenAndScreenOn(showWhenLocked = true, turnScreenOn = true)
 
         // Setup hardware sensor orientation listener so the desk timer auto-rotates
         // even if system auto-rotate lock is enabled.
         setupAutoRotateListener()
+
+        // Hide system bars immediately whenever window insets change (e.g. keyguard transition)
+        window.decorView.setOnApplyWindowInsetsListener { _, insets ->
+            if (isImmersiveActive) {
+                val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+                insetsController.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            }
+            insets
+        }
 
         // Observe user settings to dynamically control AOD keep-screen-on and lock screen visibility
         lifecycleScope.launch {
@@ -125,6 +143,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (targetOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED && requestedOrientation != targetOrientation) {
+                    lastValidOrientation = targetOrientation
                     requestedOrientation = targetOrientation
                 }
             }
@@ -144,7 +163,10 @@ class MainActivity : ComponentActivity() {
             window.addFlags(
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                 WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-                WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
+                WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_FULLSCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
             )
         } else {
             window.clearFlags(
@@ -160,20 +182,36 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setFullscreenImmersive(immersive: Boolean) {
+        isImmersiveActive = immersive
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
         if (immersive) {
             insetsController.systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            @Suppress("DEPRECATION")
+            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         } else {
             insetsController.show(WindowInsetsCompat.Type.systemBars())
+            @Suppress("DEPRECATION")
+            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (isImmersiveActive) setFullscreenImmersive(true)
+        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+            requestedOrientation = lastValidOrientation
         }
     }
 
     override fun onResume() {
         super.onResume()
-        setFullscreenImmersive(true)
+        if (isImmersiveActive) setFullscreenImmersive(true)
         orientationListener?.enable()
+        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+            requestedOrientation = lastValidOrientation
+        }
         lifecycleScope.launch {
             val settings = settingsRepository.settings.first()
             if (settings.keepScreenOn) {
@@ -184,9 +222,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
+        if (isImmersiveActive) {
             setFullscreenImmersive(true)
-            orientationListener?.enable()
+        }
+        orientationListener?.enable()
+        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+            requestedOrientation = lastValidOrientation
         }
     }
 

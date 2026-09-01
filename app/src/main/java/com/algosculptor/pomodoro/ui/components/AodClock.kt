@@ -1,5 +1,7 @@
 package com.algosculptor.pomodoro.ui.components
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,6 +33,7 @@ fun AodClock(
     dimmed: Boolean,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 96.sp,
+    onClick: (() -> Unit)? = null,
 ) {
     var shift by remember { mutableStateOf(IntOffset(0, 0)) }
     LaunchedEffect(Unit) {
@@ -43,12 +46,21 @@ fun AodClock(
         }
     }
 
+    val clickModifier = if (onClick != null) {
+        Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onClick
+        )
+    } else Modifier
+
     Text(
         text = text,
         style = MaterialTheme.typography.displayLarge.copy(fontSize = fontSize),
         color = MaterialTheme.colorScheme.onBackground,
         modifier = modifier
             .offset { shift }
+            .then(clickModifier)
             .alpha(if (dimmed) 0.35f else 1f)
             .semantics { this.contentDescription = contentDescription },
     )

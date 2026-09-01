@@ -44,4 +44,10 @@
     <!-- Bundled tracks -->
     <string name="track_rain_drift">Rain Drift</string>
     <string name="track_night_pad">Night Pad</string>
+
+    <!-- Quick Time Edit -->
+    <string name="quick_edit_focus_title">Focus Duration</string>
+    <string name="quick_edit_rest_title">Rest Duration</string>
+    <string name="quick_edit_hint">Tap to edit • Swipe to toggle Focus / Rest</string>
+    <string name="quick_edit_done">Done</string>
 </resources>

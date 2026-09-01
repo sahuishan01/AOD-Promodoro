@@ -1,18 +1,29 @@
 package com.algosculptor.pomodoro.ui.screens.timer
 
+import android.content.res.Configuration
 import android.net.Uri
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
@@ -21,35 +32,39 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import android.content.res.Configuration
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,9 +73,10 @@ import com.algosculptor.pomodoro.core.util.TimeFormatter
 import com.algosculptor.pomodoro.data.background.BackgroundCatalog
 import com.algosculptor.pomodoro.timer.TimerPhase
 import com.algosculptor.pomodoro.ui.components.AodClock
-import kotlin.time.Duration.Companion.minutes
 import com.algosculptor.pomodoro.ui.components.BackgroundModel
 import com.algosculptor.pomodoro.ui.components.BackgroundSurface
+import kotlin.math.abs
+import kotlin.time.Duration.Companion.minutes
 
 @Composable
 fun TimerScreen(
@@ -78,6 +94,10 @@ fun TimerScreen(
         onDispose { view.keepScreenOn = false }
     }
 
+    // Active mode while timer is idle (allows toggling preview/duration before starting)
+    var idleSelectedPhase by remember { mutableStateOf(TimerPhase.WORKING) }
+    var showTimeAdjustDialog by remember { mutableStateOf(false) }
+
     // Haptic phase cue (opt-in).
     var lastPhase by remember { mutableStateOf(ui.snapshot.phase) }
     if (ui.settings.hapticsEnabled && ui.snapshot.phase != lastPhase) {
@@ -88,7 +108,6 @@ fun TimerScreen(
     }
 
     // Auto-dim: after 5 minutes in the same phase, the clock dims to 35%.
-    // Running phases recompose every second, so this stays fresh without a timer.
     var phaseStartMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     if (ui.snapshot.phase != lastPhase) {
         phaseStartMillis = System.currentTimeMillis()
@@ -110,12 +129,56 @@ fun TimerScreen(
         label = "controlsAlpha"
     )
 
+    val isIdle = !ui.snapshot.phase.isRunning
+    val activePhase = if (isIdle) idleSelectedPhase else ui.snapshot.phase
+    val isFocus = activePhase == TimerPhase.WORKING
+
+    // Slide/Swipe gesture detection across clock area
+    var dragAccumulatorX by remember { mutableFloatStateOf(0f) }
+    val swipeModifier = Modifier.pointerInput(isIdle, idleSelectedPhase, ui.snapshot.phase) {
+        detectHorizontalDragGestures(
+            onDragStart = { dragAccumulatorX = 0f },
+            onDragEnd = {
+                if (abs(dragAccumulatorX) > 35f) {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    lastTouchMillis = System.currentTimeMillis()
+                    if (isIdle) {
+                        idleSelectedPhase = if (idleSelectedPhase == TimerPhase.WORKING) TimerPhase.RESTING else TimerPhase.WORKING
+                    } else {
+                        viewModel.skip()
+                    }
+                }
+                dragAccumulatorX = 0f
+            },
+            onHorizontalDrag = { _, dragAmount ->
+                dragAccumulatorX += dragAmount
+            }
+        )
+    }
+
+    // Quick Time Adjustment Dialog
+    if (showTimeAdjustDialog) {
+        QuickTimeAdjustDialog(
+            isFocus = isFocus,
+            currentMinutes = if (isFocus) ui.settings.workMinutes else ui.settings.restMinutes,
+            onDismiss = { showTimeAdjustDialog = false },
+            onConfirm = { newMinutes ->
+                viewModel.updateDuration(isFocus = isFocus, minutes = newMinutes)
+            },
+            onToggleMode = {
+                if (isIdle) {
+                    idleSelectedPhase = if (idleSelectedPhase == TimerPhase.WORKING) TimerPhase.RESTING else TimerPhase.WORKING
+                }
+            }
+        )
+    }
+
     BackgroundSurface(model = backgroundModel) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
-                    detectTapGestures { lastTouchMillis = System.currentTimeMillis() }
+                    detectTapGestures(onTap = { lastTouchMillis = System.currentTimeMillis() })
                 }
         ) {
             if (isLandscape) {
@@ -131,25 +194,56 @@ fun TimerScreen(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.weight(1.1f),
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .then(swipeModifier),
                     ) {
-                        PhaseBadge(ui.snapshot.phase)
+                        InteractivePhaseBadge(
+                            currentPhase = ui.snapshot.phase,
+                            isIdle = isIdle,
+                            idleSelectedPhase = idleSelectedPhase,
+                            onToggle = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                lastTouchMillis = System.currentTimeMillis()
+                                if (isIdle) {
+                                    idleSelectedPhase = if (idleSelectedPhase == TimerPhase.WORKING) TimerPhase.RESTING else TimerPhase.WORKING
+                                } else {
+                                    viewModel.skip()
+                                }
+                            }
+                        )
                         Spacer(Modifier.height(8.dp))
                         AodClock(
                             text = TimeFormatter.formatClock(
-                                if (ui.snapshot.phase == TimerPhase.IDLE) ui.settings.workMinutes.minutes
-                                else ui.snapshot.remaining
+                                if (isIdle) {
+                                    if (idleSelectedPhase == TimerPhase.WORKING) ui.settings.workMinutes.minutes
+                                    else ui.settings.restMinutes.minutes
+                                } else {
+                                    ui.snapshot.remaining
+                                }
                             ),
                             contentDescription = stringResource(R.string.cd_timer_clock),
                             dimmed = dimmed,
                             fontSize = 72.sp,
+                            onClick = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                showTimeAdjustDialog = true
+                            }
                         )
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "Cycle ${ui.snapshot.completedCycles + 1}",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        if (isIdle) {
+                            Text(
+                                text = stringResource(R.string.quick_edit_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            )
+                        } else {
+                            Text(
+                                text = "Cycle ${ui.snapshot.completedCycles + 1}",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
 
                     Column(
@@ -164,7 +258,7 @@ fun TimerScreen(
                             isPaused = ui.snapshot.isPaused,
                             onStart = {
                                 lastTouchMillis = System.currentTimeMillis()
-                                viewModel.start()
+                                viewModel.start(if (isIdle) idleSelectedPhase else TimerPhase.WORKING)
                             },
                             onPause = {
                                 lastTouchMillis = System.currentTimeMillis()
@@ -191,9 +285,9 @@ fun TimerScreen(
                                 lastTouchMillis = System.currentTimeMillis()
                                 viewModel.toggleAudio()
                             },
-                            onVolume = {
+                            onVolume = { vol: Float ->
                                 lastTouchMillis = System.currentTimeMillis()
-                                viewModel.setVolume(it)
+                                viewModel.setVolume(vol)
                             },
                         )
                     }
@@ -208,23 +302,58 @@ fun TimerScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    PhaseBadge(ui.snapshot.phase)
-                    Spacer(Modifier.height(16.dp))
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = swipeModifier,
+                    ) {
+                        InteractivePhaseBadge(
+                            currentPhase = ui.snapshot.phase,
+                            isIdle = isIdle,
+                            idleSelectedPhase = idleSelectedPhase,
+                            onToggle = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                lastTouchMillis = System.currentTimeMillis()
+                                if (isIdle) {
+                                    idleSelectedPhase = if (idleSelectedPhase == TimerPhase.WORKING) TimerPhase.RESTING else TimerPhase.WORKING
+                                } else {
+                                    viewModel.skip()
+                                }
+                            }
+                        )
+                        Spacer(Modifier.height(16.dp))
 
-                    AodClock(
-                        text = TimeFormatter.formatClock(
-                            if (ui.snapshot.phase == TimerPhase.IDLE) ui.settings.workMinutes.minutes
-                            else ui.snapshot.remaining
-                        ),
-                        contentDescription = stringResource(R.string.cd_timer_clock),
-                        dimmed = dimmed,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Cycle ${ui.snapshot.completedCycles + 1}",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                        AodClock(
+                            text = TimeFormatter.formatClock(
+                                if (isIdle) {
+                                    if (idleSelectedPhase == TimerPhase.WORKING) ui.settings.workMinutes.minutes
+                                    else ui.settings.restMinutes.minutes
+                                } else {
+                                    ui.snapshot.remaining
+                                }
+                            ),
+                            contentDescription = stringResource(R.string.cd_timer_clock),
+                            dimmed = dimmed,
+                            onClick = {
+                                lastTouchMillis = System.currentTimeMillis()
+                                showTimeAdjustDialog = true
+                            }
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        if (isIdle) {
+                            Text(
+                                text = stringResource(R.string.quick_edit_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            )
+                        } else {
+                            Text(
+                                text = "Cycle ${ui.snapshot.completedCycles + 1}",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
                     Spacer(Modifier.height(48.dp))
 
                     Column(
@@ -236,7 +365,7 @@ fun TimerScreen(
                             isPaused = ui.snapshot.isPaused,
                             onStart = {
                                 lastTouchMillis = System.currentTimeMillis()
-                                viewModel.start()
+                                viewModel.start(if (isIdle) idleSelectedPhase else TimerPhase.WORKING)
                             },
                             onPause = {
                                 lastTouchMillis = System.currentTimeMillis()
@@ -264,9 +393,9 @@ fun TimerScreen(
                                 lastTouchMillis = System.currentTimeMillis()
                                 viewModel.toggleAudio()
                             },
-                            onVolume = {
+                            onVolume = { vol: Float ->
                                 lastTouchMillis = System.currentTimeMillis()
-                                viewModel.setVolume(it)
+                                viewModel.setVolume(vol)
                             },
                         )
                     }
@@ -306,20 +435,169 @@ private fun resolveBackground(id: String): BackgroundModel {
 }
 
 @Composable
-private fun PhaseBadge(phase: TimerPhase) {
-    val label = when (phase) {
-        TimerPhase.WORKING -> stringResource(R.string.phase_working)
-        TimerPhase.RESTING -> stringResource(R.string.phase_resting)
-        TimerPhase.COMPLETE -> stringResource(R.string.phase_complete)
-        TimerPhase.IDLE -> stringResource(R.string.phase_idle)
+private fun InteractivePhaseBadge(
+    currentPhase: TimerPhase,
+    isIdle: Boolean,
+    idleSelectedPhase: TimerPhase,
+    onToggle: () -> Unit,
+) {
+    val isFocus = if (isIdle) idleSelectedPhase == TimerPhase.WORKING else currentPhase == TimerPhase.WORKING
+    val label = if (isFocus) stringResource(R.string.phase_working) else stringResource(R.string.phase_resting)
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+        modifier = Modifier
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+        ) {
+            Text(
+                text = "‹ ",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+            )
+            Text(
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = " ›",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+            )
+        }
     }
-    Text(
-        text = label.uppercase(),
-        style = MaterialTheme.typography.headlineMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.semantics {
-            contentDescription = label
+}
+
+@Composable
+fun QuickTimeAdjustDialog(
+    isFocus: Boolean,
+    currentMinutes: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+    onToggleMode: () -> Unit,
+) {
+    var selectedMinutes by remember(currentMinutes) { mutableIntStateOf(currentMinutes) }
+    val maxMinutes = if (isFocus) 120 else 60
+    val minMinutes = 1
+    val presets = if (isFocus) listOf(15, 20, 25, 30, 45, 50, 60, 90) else listOf(3, 5, 10, 15, 20, 30)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = if (isFocus) stringResource(R.string.quick_edit_focus_title)
+                           else stringResource(R.string.quick_edit_rest_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                FilterChip(
+                    selected = false,
+                    onClick = onToggleMode,
+                    label = {
+                        Text(if (isFocus) "Rest" else "Focus")
+                    }
+                )
+            }
         },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    FilledTonalIconButton(
+                        onClick = { selectedMinutes = (selectedMinutes - 5).coerceAtLeast(minMinutes) },
+                        modifier = Modifier.size(42.dp),
+                    ) {
+                        Text("-5", style = MaterialTheme.typography.labelLarge)
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    FilledTonalIconButton(
+                        onClick = { selectedMinutes = (selectedMinutes - 1).coerceAtLeast(minMinutes) },
+                        modifier = Modifier.size(42.dp),
+                    ) {
+                        Text("-1", style = MaterialTheme.typography.labelLarge)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = "$selectedMinutes min",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    FilledTonalIconButton(
+                        onClick = { selectedMinutes = (selectedMinutes + 1).coerceAtMost(maxMinutes) },
+                        modifier = Modifier.size(42.dp),
+                    ) {
+                        Text("+1", style = MaterialTheme.typography.labelLarge)
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    FilledTonalIconButton(
+                        onClick = { selectedMinutes = (selectedMinutes + 5).coerceAtMost(maxMinutes) },
+                        modifier = Modifier.size(42.dp),
+                    ) {
+                        Text("+5", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+
+                Slider(
+                    value = selectedMinutes.toFloat(),
+                    onValueChange = { selectedMinutes = it.toInt() },
+                    valueRange = minMinutes.toFloat()..maxMinutes.toFloat(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    items(presets) { preset ->
+                        val isSelected = selectedMinutes == preset
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { selectedMinutes = preset },
+                            label = { Text("${preset}m") },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm(selectedMinutes)
+                    onDismiss()
+                }
+            ) {
+                Text(stringResource(R.string.quick_edit_done))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
     )
 }
 
@@ -393,3 +671,5 @@ private fun VolumeRow(
         )
     }
 }
+
+

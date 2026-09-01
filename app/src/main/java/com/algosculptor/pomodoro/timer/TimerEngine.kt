@@ -69,11 +69,13 @@ class TimerEngine(
         }
     }
 
-    fun start() {
+    fun start(initialPhase: TimerPhase = TimerPhase.WORKING) {
         val s = _snapshot.value
         if (s.phase.isRunning && !s.isPaused) return
         if (s.isPaused) { resume(); return }
-        enterPhase(TimerPhase.WORKING, config.work)
+        val targetPhase = if (initialPhase == TimerPhase.RESTING) TimerPhase.RESTING else TimerPhase.WORKING
+        val duration = if (targetPhase == TimerPhase.RESTING) config.rest else config.work
+        enterPhase(targetPhase, duration)
     }
 
     fun pause() {
@@ -103,6 +105,12 @@ class TimerEngine(
             TimerPhase.RESTING -> enterPhase(TimerPhase.WORKING, config.work)
             else -> Unit
         }
+    }
+
+    /** Explicitly switches running or idle timer to the specified phase. */
+    fun switchToPhase(targetPhase: TimerPhase) {
+        val duration = if (targetPhase == TimerPhase.RESTING) config.rest else config.work
+        enterPhase(targetPhase, duration)
     }
 
     private fun enterPhase(phase: TimerPhase, duration: Duration) {

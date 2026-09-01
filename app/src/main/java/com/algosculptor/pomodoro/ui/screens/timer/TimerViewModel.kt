@@ -10,6 +10,7 @@ import com.algosculptor.pomodoro.media.PlaybackController
 import com.algosculptor.pomodoro.data.media.AmbientAudioRepository
 import com.algosculptor.pomodoro.timer.EngineSnapshot
 import com.algosculptor.pomodoro.timer.TimerEngine
+import com.algosculptor.pomodoro.timer.TimerPhase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,8 +45,8 @@ class TimerViewModel @Inject constructor(
         TimerUiState(snap, settings, playbackState.isPlaying)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TimerUiState())
 
-    fun start() {
-        engine.start()
+    fun start(phase: TimerPhase = TimerPhase.WORKING) {
+        engine.start(phase)
         viewModelScope.launch {
             val s = settingsRepository.settings.first()
             if (s.audioSelection != "off") {
@@ -75,6 +76,18 @@ class TimerViewModel @Inject constructor(
     }
 
     fun skip() = engine.skipPhase()
+
+    fun switchToPhase(phase: TimerPhase) = engine.switchToPhase(phase)
+
+    fun updateDuration(isFocus: Boolean, minutes: Int) {
+        viewModelScope.launch {
+            if (isFocus) {
+                settingsRepository.setWorkMinutes(minutes)
+            } else {
+                settingsRepository.setRestMinutes(minutes)
+            }
+        }
+    }
 
     fun applyAudioSelection(settings: AppSettings) {
         val sel = settings.audioSelection
