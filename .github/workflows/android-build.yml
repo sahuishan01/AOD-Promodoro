@@ -126,12 +126,73 @@ jobs:
 
       - name: Publish GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
-          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
-            gh release create "${{ github.ref_name }}" \
-              --title "AOD Pomodoro ${{ github.ref_name }}" \
-              --notes "AOD Pomodoro ${{ github.ref_name }} Release"
+          python3 - << 'EOF'
+          import os, sys, urllib.request, urllib.error, json
 
-          gh release upload "${{ github.ref_name }}" dist/* --clobber
+          token = os.environ["GITHUB_TOKEN"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          tag = os.environ["GITHUB_REF_NAME"]
+
+          # 1. Get or Create Release
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/releases/tags/{tag}",
+              headers={"Authorization": f"token {token}", "User-Agent": "AOD-Pomodoro"}
+          )
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  data = json.loads(resp.read().decode())
+                  rel_id = data["id"]
+                  print(f"Found existing release ID: {rel_id}")
+          except Exception as e:
+              print(f"Creating release for tag {tag}...")
+              create_req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/releases",
+                  data=json.dumps({"tag_name": tag, "name": f"AOD Pomodoro {tag}", "body": f"AOD Pomodoro {tag} Release"}).encode(),
+                  headers={"Authorization": f"token {token}", "Content-Type": "application/json", "User-Agent": "AOD-Pomodoro"}
+              )
+              with urllib.request.urlopen(create_req) as resp:
+                  data = json.loads(resp.read().decode())
+                  rel_id = data["id"]
+                  print(f"Created release ID: {rel_id}")
+
+          # 2. Upload assets in dist/
+          dist_files = sorted([os.path.join("dist", f) for f in os.listdir("dist") if f.endswith(".apk") or f.endswith(".aab")])
+          print(f"Found {len(dist_files)} assets to upload: {dist_files}")
+          if not dist_files:
+              print("No assets found in dist!")
+              sys.exit(1)
+
+          for fpath in dist_files:
+              fname = os.path.basename(fpath)
+              with open(fpath, "rb") as f:
+                  body = f.read()
+
+              upload_url = f"https://uploads.github.com/repos/{repo}/releases/{rel_id}/assets?name={fname}"
+              print(f"Uploading {fname} ({len(body) / 1024 / 1024:.2f} MB)...")
+
+              up_req = urllib.request.Request(
+                  upload_url,
+                  data=body,
+                  headers={
+                      "Authorization": f"token {token}",
+                      "Content-Type": "application/octet-stream",
+                      "User-Agent": "AOD-Pomodoro"
+                  }
+              )
+              try:
+                  with urllib.request.urlopen(up_req) as resp:
+                      res_json = json.loads(resp.read().decode())
+                      print(f"✓ Uploaded {fname} (asset ID: {res_json.get('id')})")
+              except urllib.error.HTTPError as e:
+                  err_body = e.read().decode()
+                  print(f"HTTP Error {e.code}: {err_body}")
+                  if "already_exists" in err_body:
+                      print(f"{fname} already exists on release.")
+                  else:
+                      sys.exit(1)
+          print("All release assets published successfully!")
+          EOF
