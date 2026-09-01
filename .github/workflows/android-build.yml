@@ -127,32 +127,11 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          gh release view --repo "${{ github.repository }}" "${{ github.ref_name }}" > /dev/null 2>&1 || \
-            gh release create --repo "${{ github.repository }}" "${{ github.ref_name }}" \
+          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
+            gh release create "${{ github.ref_name }}" \
               --title "AOD Pomodoro ${{ github.ref_name }}" \
               --notes "AOD Pomodoro ${{ github.ref_name }} Release"
 
-          RELEASE_ID=$(gh release view --repo "${{ github.repository }}" "${{ github.ref_name }}" --json id -q .id)
-          echo "Target Release ID is $RELEASE_ID"
-
-          for FILE in dist/*; do
-            FNAME=$(basename "$FILE")
-            echo "Uploading $FNAME..."
-            HTTP_STATUS=$(curl -s -o /tmp/upload_err.json -w "%{http_code}" -X POST \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary @"$FILE" \
-              "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=$FNAME")
-
-            echo "Upload HTTP Status for $FNAME: $HTTP_STATUS"
-            if [ "$HTTP_STATUS" -ne 201 ]; then
-              echo "::error::Upload failed for $FNAME! Response:"
-              cat /tmp/upload_err.json
-              exit 1
-            fi
-            echo "✓ Uploaded $FNAME"
-          done
+          gh release upload "${{ github.ref_name }}" dist/* --clobber
