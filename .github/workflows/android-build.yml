@@ -119,57 +119,10 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          mkdir -p dist
-          cp -v app/build/outputs/apk/release/*.apk dist/ || true
-          cp -v app/build/outputs/apk/debug/*.apk dist/ || true
-          cp -v app/build/outputs/bundle/release/*.aab dist/ || true
-
-          echo "=== Contents of dist/ ==="
-          ls -la dist/
-
-          # 1. Fetch or create release
-          RELEASE_RESP=$(curl -s \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "User-Agent: GitHub-Actions" \
-            "https://api.github.com/repos/$GH_REPO/releases/tags/${{ github.ref_name }}")
-          
-          RELEASE_ID=$(echo "$RELEASE_RESP" | jq -r '.id // empty')
-          UPLOAD_URL=$(echo "$RELEASE_RESP" | jq -r '.upload_url // empty' | cut -d'{' -f1)
-
-          if [ -z "$RELEASE_ID" ]; then
-            echo "Creating release for ${{ github.ref_name }}..."
-            CREATE_RESP=$(curl -s -X POST \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              -H "Content-Type: application/json" \
-              -H "User-Agent: GitHub-Actions" \
-              "https://api.github.com/repos/$GH_REPO/releases" \
-              -d "{\"tag_name\":\"${{ github.ref_name }}\",\"name\":\"AOD Pomodoro ${{ github.ref_name }}\",\"draft\":false,\"prerelease\":false}")
-            RELEASE_ID=$(echo "$CREATE_RESP" | jq -r '.id // empty')
-            UPLOAD_URL=$(echo "$CREATE_RESP" | jq -r '.upload_url // empty' | cut -d'{' -f1)
-            echo "Created release ID: $RELEASE_ID"
-          else
-            echo "Found existing release ID: $RELEASE_ID"
-          fi
-
-          if [ -z "$RELEASE_ID" ] || [ -z "$UPLOAD_URL" ]; then
-            echo "::error::Failed to obtain release ID or upload URL!"
-            echo "Response: $RELEASE_RESP"
-            exit 1
-          fi
-
-          # 2. Upload assets
-          shopt -s nullglob
-          FILES=(dist/*)
-          if [ ${#FILES[@]} -eq 0 ]; then
-            echo "::error::No files to publish in dist/!"
-            exit 1
-          fi
-
-          echo "Uploading assets: ${FILES[*]}"
-          gh release upload "${{ github.ref_name }}" "${FILES[@]}" --repo "$GH_REPO" --clobber
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+          generate_release_notes: true
