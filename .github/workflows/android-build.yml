@@ -132,3 +132,23 @@ jobs:
             --repo "${{ github.repository }}" \
             --title "AOD Pomodoro ${{ github.ref_name }}" \
             --generate-notes
+
+      - name: Send Release Notification Webhook
+        if: success() && startsWith(github.ref, 'refs/tags/')
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer tk_cw33joa3jxozijd46cl724tl2dhgd" \
+            -H "Title: AOD Pomodoro ${{ github.ref_name }} Released (GitHub-CI)" \
+            -d "• Release build succeeded with all APK and AAB binaries
+          • Download: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}" \
+            https://ntfy.algosculptor.com/agent-releases || true
+
+      - name: Send Failure Notification Webhook
+        if: failure()
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer tk_cw33joa3jxozijd46cl724tl2dhgd" \
+            -H "Title: AOD Pomodoro Build Failed (GitHub-CI)" \
+            -d "• Build failed on ref: ${{ github.ref_name }}
+          • Run URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            https://ntfy.algosculptor.com/agent-tasks || true
