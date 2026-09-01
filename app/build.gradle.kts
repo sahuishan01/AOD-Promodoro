@@ -14,8 +14,8 @@ android {
         applicationId = "com.algosculptor.pomodoro"
         minSdk = 34
         targetSdk = 35
-        versionCode = 70
-        versionName = "0.2.68"
+        versionCode = 71
+        versionName = "0.2.69"
     }
 
     signingConfigs {
