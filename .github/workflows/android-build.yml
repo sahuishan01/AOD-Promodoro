@@ -115,13 +115,18 @@ jobs:
           path: app/build/reports/tests/
           if-no-files-found: ignore
 
+      - name: Stage Release Assets
+        run: |
+          mkdir -p dist
+          find app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -not -path "*/baselineProfiles/*" -not -path "*/debug/*" -exec cp -v {} dist/ ';'
+          echo "=== Staged files in dist/ ==="
+          ls -la dist/
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            app/build/outputs/apk/**/*.apk
-            app/build/outputs/bundle/**/*.aab
-          fail_on_unmatched_files: false
+          files: dist/*
+          fail_on_unmatched_files: true
           generate_release_notes: false
           name: AOD Pomodoro ${{ github.ref_name }}
           body: AOD Pomodoro ${{ github.ref_name }} Release
