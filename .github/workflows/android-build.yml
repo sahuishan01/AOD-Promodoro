@@ -117,7 +117,7 @@ jobs:
 
       - name: Publish GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist
           cp app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
@@ -126,10 +126,76 @@ jobs:
           echo "Files ready to publish:"
           ls -la dist/
 
-          if ! gh release view "${{ github.ref_name }}" > /dev/null 2>&1; then
-            echo "Creating release ${{ github.ref_name }}..."
-            gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --generate-notes
-          fi
+          python3 - << 'EOF'
+          import os, sys, json, urllib.request
 
-          echo "Uploading release artifacts..."
-          gh release upload "${{ github.ref_name }}" dist/* --clobber
+          token = os.environ['GITHUB_TOKEN']
+          repo = os.environ['GITHUB_REPOSITORY']
+          tag = os.environ['GITHUB_REF_NAME']
+
+          headers = {
+              'Authorization': f'Bearer {token}',
+              'Accept': 'application/vnd.github+json',
+              'User-Agent': 'GitHubActions'
+          }
+
+          # 1. Check existing release or create published release
+          req = urllib.request.Request(f'https://api.github.com/repos/{repo}/releases/tags/{tag}', headers=headers)
+          try:
+              res = urllib.request.urlopen(req)
+              release = json.loads(res.read())
+              print(f"Found existing release: id={release['id']}")
+              if release.get('draft'):
+                  edit_req = urllib.request.Request(
+                      f"https://api.github.com/repos/{repo}/releases/{release['id']}",
+                      data=json.dumps({"draft": False}).encode(),
+                      headers=headers,
+                      method='PATCH'
+                  )
+                  urllib.request.urlopen(edit_req)
+                  print("Published draft release.")
+          except Exception:
+              print(f"Creating release for {tag}...")
+              create_req = urllib.request.Request(
+                  f'https://api.github.com/repos/{repo}/releases',
+                  data=json.dumps({
+                      "tag_name": tag,
+                      "name": f"AOD Pomodoro {tag}",
+                      "draft": False,
+                      "prerelease": False,
+                      "generate_release_notes": True
+                  }).encode(),
+                  headers=headers,
+                  method='POST'
+              )
+              res = urllib.request.urlopen(create_req)
+              release = json.loads(res.read())
+              print(f"Release created: id={release['id']}")
+
+          upload_url = release['upload_url'].split('{')[0]
+
+          # 2. Upload assets
+          dist_dir = 'dist'
+          for fname in os.listdir(dist_dir):
+              fpath = os.path.join(dist_dir, fname)
+              if not os.path.isfile(fpath): continue
+              print(f"Uploading {fname} ({os.path.getsize(fpath)} bytes)...")
+              with open(fpath, 'rb') as f:
+                  data = f.read()
+              
+              upload_req = urllib.request.Request(
+                  f"{upload_url}?name={fname}",
+                  data=data,
+                  headers={
+                      'Authorization': f'Bearer {token}',
+                      'Content-Type': 'application/octet-stream',
+                      'User-Agent': 'GitHubActions'
+                  },
+                  method='POST'
+              )
+              try:
+                  urllib.request.urlopen(upload_req)
+                  print(f"Successfully uploaded {fname}")
+              except Exception as err:
+                  print(f"Upload response for {fname}: {err}")
+          EOF
