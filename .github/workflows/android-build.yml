@@ -68,7 +68,12 @@ jobs:
         run: ./gradlew testDebugUnitTest --console=plain
 
       - name: Assemble debug APK
-        run: ./gradlew assembleDebug --console=plain
+        run: |
+          ./gradlew assembleDebug --console=plain --stacktrace 2>&1 | tee assemble-debug.log || {
+            echo "::error::assembleDebug failed! Last 150 lines of build output:"
+            tail -n 150 assemble-debug.log
+            exit 1
+          }
 
       - name: Assemble release APK
         env:
