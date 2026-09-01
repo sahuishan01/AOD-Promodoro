@@ -14,8 +14,8 @@ android {
         applicationId = "com.algosculptor.pomodoro"
         minSdk = 34
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.2.7"
+        versionCode = 10
+        versionName = "0.2.8"
     }
 
     signingConfigs {
@@ -38,7 +38,10 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            val relConfig = signingConfigs.findByName("release")
+            if (relConfig?.storeFile != null && relConfig.storeFile!!.exists()) {
+                signingConfig = relConfig
+            }
         }
         release {
             isMinifyEnabled = true
