@@ -138,15 +138,10 @@ jobs:
 
       - name: Publish GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "=== Staged assets ==="
           ls -lh dist/
           echo "=== Publishing Release ==="
-          gh release create "${{ github.ref_name }}" dist/* \
-            --title "AOD Pomodoro ${{ github.ref_name }}" \
-            --notes "Production signed release for AOD Pomodoro ${{ github.ref_name }}." \
-            || gh release upload "${{ github.ref_name }}" dist/* --clobber
-          echo "=== Verifying Assets on GitHub ==="
-          gh release view "${{ github.ref_name }}"
+          python3 scripts/publish_release.py
 
