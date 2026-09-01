@@ -17,9 +17,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
       - uses: actions/setup-java@v4
         with:
@@ -118,20 +115,18 @@ jobs:
           path: app/build/reports/tests/
           if-no-files-found: ignore
 
-      - name: Stage Release Assets
-        run: |
-          mkdir -p release-assets
-          find app/build/outputs/ -type f \( -name "*.apk" -o -name "*.aab" \) -not -path "*/baselineProfiles/*" -exec cp -v {} release-assets/ \;
-          ls -la release-assets/
-
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: AOD Pomodoro ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            release-assets/*.apk
-            release-assets/*.aab
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist
+          cp -v app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
+          cp -v app/build/outputs/apk/debug/*.apk dist/ 2>/dev/null || true
+          cp -v app/build/outputs/bundle/release/*.aab dist/ 2>/dev/null || true
+          echo "Files ready to publish:"
+          ls -la dist/
+
+          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
+            gh release create "${{ github.ref_name }}" --title "AOD Pomodoro ${{ github.ref_name }}" --generate-notes
+
+          gh release upload "${{ github.ref_name }}" dist/* --clobber
