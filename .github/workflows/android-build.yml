@@ -118,6 +118,14 @@ jobs:
           path: app/build/reports/tests/
           if-no-files-found: ignore
 
+      - name: Stage Release Assets
+        run: |
+          mkdir -p release-assets
+          cp -v app/build/outputs/apk/release/*.apk release-assets/aod_pomodoro-${{ github.ref_name }}-release.apk
+          cp -v app/build/outputs/apk/debug/*.apk release-assets/aod_pomodoro-${{ github.ref_name }}-debug.apk
+          cp -v app/build/outputs/bundle/release/*.aab release-assets/aod_pomodoro-${{ github.ref_name }}-release.aab
+          ls -la release-assets/
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -126,7 +134,8 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/bundle/release/*.aab
+            release-assets/aod_pomodoro-${{ github.ref_name }}-release.apk
+            release-assets/aod_pomodoro-${{ github.ref_name }}-debug.apk
+            release-assets/aod_pomodoro-${{ github.ref_name }}-release.aab
