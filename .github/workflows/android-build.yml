@@ -116,14 +116,78 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: AOD Pomodoro ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          fail_on_unmatched_files: true
-          files: |
-            app/build/outputs/apk/release/app-release.apk
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/bundle/release/app-release.aab
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p dist
+          find app/build/outputs/ -type f \( -name "*.apk" -o -name "*.aab" \) -not -path "*/baselineProfiles/*" -exec cp -v {} dist/ \;
+          ls -la dist/
+
+          RELEASE_JSON=$(curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "User-Agent: GitHub-Actions" \
+            "https://api.github.com/repos/$GH_REPO/releases/tags/${{ github.ref_name }}")
+
+          RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id // empty')
+          UPLOAD_URL=$(echo "$RELEASE_JSON" | jq -r '.upload_url // empty' | cut -d'{' -f1)
+
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Creating release for ${{ github.ref_name }}..."
+            CREATE_JSON=$(curl -s -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
+              -H "User-Agent: GitHub-Actions" \
+              "https://api.github.com/repos/$GH_REPO/releases" \
+              -d "{\"tag_name\":\"${{ github.ref_name }}\",\"name\":\"AOD Pomodoro ${{ github.ref_name }}\",\"draft\":false,\"prerelease\":false}")
+            echo "Create response: $CREATE_JSON"
+            RELEASE_ID=$(echo "$CREATE_JSON" | jq -r '.id // empty')
+            UPLOAD_URL=$(echo "$CREATE_JSON" | jq -r '.upload_url // empty' | cut -d'{' -f1)
+          fi
+
+          echo "Release ID: $RELEASE_ID"
+          echo "Upload URL: $UPLOAD_URL"
+
+          if [ -z "$RELEASE_ID" ] || [ -z "$UPLOAD_URL" ]; then
+            echo "::error::Could not resolve Release ID or Upload URL!"
+            exit 1
+          fi
+
+          for FILE in dist/*.apk dist/*.aab; do
+            [ -f "$FILE" ] || continue
+            FNAME=$(basename "$FILE")
+            echo "Uploading $FNAME..."
+            
+            ASSET_ID=$(curl -s \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "User-Agent: GitHub-Actions" \
+              "https://api.github.com/repos/$GH_REPO/releases/$RELEASE_ID/assets" | jq -r ".[] | select(.name==\"$FNAME\") | .id // empty")
+
+            if [ -n "$ASSET_ID" ]; then
+              echo "Deleting existing asset $FNAME (id=$ASSET_ID)..."
+              curl -s -X DELETE \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                -H "User-Agent: GitHub-Actions" \
+                "https://api.github.com/repos/$GH_REPO/releases/assets/$ASSET_ID"
+            fi
+
+            HTTP_CODE=$(curl -s -o /tmp/upload_resp.json -w "%{http_code}" -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "User-Agent: GitHub-Actions" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$FILE" \
+              "${UPLOAD_URL}?name=${FNAME}")
+
+            echo "Upload HTTP Status for $FNAME: $HTTP_CODE"
+            if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+              echo "Upload error response:"
+              cat /tmp/upload_resp.json
+              exit 1
+            fi
+            echo "✓ Successfully uploaded $FNAME"
+          done
