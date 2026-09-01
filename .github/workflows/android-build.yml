@@ -128,7 +128,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view --repo "${{ github.repository }}" "${{ github.ref_name }}" > /dev/null 2>&1 || \
-            gh release create --repo "${{ github.repository }}" "${{ github.ref_name }}" --title "AOD Pomodoro ${{ github.ref_name }}" --notes "AOD Pomodoro ${{ github.ref_name }} Release"
+          echo "=== 1. Checking release view ==="
+          gh release view --repo "${{ github.repository }}" "${{ github.ref_name }}" || echo "Release not found yet (code $?)"
 
+          echo "=== 2. Creating release ==="
+          gh release create --repo "${{ github.repository }}" "${{ github.ref_name }}" \
+            --title "AOD Pomodoro ${{ github.ref_name }}" \
+            --notes "AOD Pomodoro ${{ github.ref_name }} Release" || echo "Release create finished with code $?"
+
+          echo "=== 3. Uploading assets ==="
           gh release upload --repo "${{ github.repository }}" --clobber "${{ github.ref_name }}" dist/*
