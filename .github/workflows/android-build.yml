@@ -191,7 +191,9 @@ jobs:
               print(f"Uploading {fname} ({size_mb:.2f} MB)...")
 
               with open(fpath, "rb") as f:
-                  up_resp = requests.post(upload_url, headers=upload_headers, data=f, timeout=300)
+                  file_bytes = f.read()
+
+              up_resp = requests.post(upload_url, headers=upload_headers, data=file_bytes, timeout=300)
 
               print(f"Upload response status for {fname}: {up_resp.status_code}")
               if up_resp.status_code not in (200, 201):
