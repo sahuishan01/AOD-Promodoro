@@ -127,14 +127,24 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "=== 1. Checking release view ==="
-          gh release view --repo "${{ github.repository }}" "${{ github.ref_name }}" || echo "Release not found yet (code $?)"
+          gh release view --repo "${{ github.repository }}" "${{ github.ref_name }}" > /dev/null 2>&1 || \
+            gh release create --repo "${{ github.repository }}" "${{ github.ref_name }}" \
+              --title "AOD Pomodoro ${{ github.ref_name }}" \
+              --notes "AOD Pomodoro ${{ github.ref_name }} Release"
 
-          echo "=== 2. Creating release ==="
-          gh release create --repo "${{ github.repository }}" "${{ github.ref_name }}" \
-            --title "AOD Pomodoro ${{ github.ref_name }}" \
-            --notes "AOD Pomodoro ${{ github.ref_name }} Release" || echo "Release create finished with code $?"
+          RELEASE_ID=$(gh release view --repo "${{ github.repository }}" "${{ github.ref_name }}" --json id -q .id)
+          echo "Target Release ID is $RELEASE_ID"
 
-          echo "=== 3. Uploading assets ==="
-          gh release upload --repo "${{ github.repository }}" --clobber "${{ github.ref_name }}" dist/*
+          for FILE in dist/*; do
+            FNAME=$(basename "$FILE")
+            echo "Uploading $FNAME..."
+            curl -f -s -X POST \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$FILE" \
+              "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=$FNAME"
+            echo "✓ Uploaded $FNAME"
+          done
