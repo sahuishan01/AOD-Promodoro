@@ -37,27 +37,18 @@ jobs:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           mkdir -p "app/keystore"
-          STORE_PASS="${SIGNING_STORE_PASSWORD:-androidpassword}"
+          STORE_PASS="${SIGNING_STORE_PASSWORD:-***PURGED***}"
           KEY_ALIAS="${SIGNING_KEY_ALIAS:-pomodoro}"
-          KEY_PASS="${SIGNING_KEY_PASSWORD:-androidpassword}"
+          KEY_PASS="${SIGNING_KEY_PASSWORD:-***PURGED***}"
 
-          if [ -n "${SIGNING_KEY:-}" ]; then
-            echo "$SIGNING_KEY" | tr -d '\r\n ' | base64 -d > "app/keystore/release.jks" 2>/dev/null || true
-            if ! keytool -list -keystore "app/keystore/release.jks" -storepass "$STORE_PASS" > /dev/null 2>&1; then
-              echo "Decoded keystore verification failed. Regenerating fallback..."
-              rm -f "app/keystore/release.jks"
-            fi
-          fi
+          DEFAULT_KEYSTORE_B64="***PURGED_KEYSTORE_BLOB***"
 
-          if [ ! -s "app/keystore/release.jks" ]; then
-            echo "Generating valid release signing keystore..."
-            keytool -genkeypair -v -keystore "app/keystore/release.jks" \
-              -alias "$KEY_ALIAS" \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "$STORE_PASS" \
-              -keypass "$STORE_PASS" \
-              -storetype JKS \
-              -dname "CN=AlgoSculptor, OU=Mobile, O=AlgoSculptor, L=SF, ST=CA, C=US"
+          RAW_KEY="${SIGNING_KEY:-$DEFAULT_KEYSTORE_B64}"
+          echo "$RAW_KEY" | tr -d '\r\n ' | base64 -d > "app/keystore/release.jks"
+
+          if ! keytool -list -keystore "app/keystore/release.jks" -storepass "$STORE_PASS" > /dev/null 2>&1; then
+            echo "Using fallback persistent keystore..."
+            echo "$DEFAULT_KEYSTORE_B64" | tr -d '\r\n ' | base64 -d > "app/keystore/release.jks"
           fi
 
           echo "SIGNING_STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
@@ -122,17 +113,12 @@ jobs:
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p dist
-          cp app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
-          cp app/build/outputs/apk/debug/*.apk dist/ 2>/dev/null || true
-          cp app/build/outputs/bundle/release/*.aab dist/ 2>/dev/null || true
-          echo "Files ready to publish:"
-          ls -la dist/
-
-          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
-            gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --generate-notes
-
-          gh release upload "${{ github.ref_name }}" dist/* --clobber
+        uses: softprops/action-gh-release@v2
+        with:
+          name: AOD Pomodoro ${{ github.ref_name }}
+          fail_on_unmatched_files: false
+          generate_release_notes: true
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/bundle/release/*.aab

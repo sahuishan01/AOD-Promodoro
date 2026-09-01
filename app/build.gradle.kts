@@ -14,14 +14,14 @@ android {
         applicationId = "com.algosculptor.pomodoro"
         minSdk = 34
         targetSdk = 35
-        versionCode = 16
-        versionName = "0.2.14"
+        versionCode = 17
+        versionName = "0.2.15"
     }
 
     signingConfigs {
-        create("release") {
+        create("pomodoro") {
             val envPath = System.getenv("KEYSTORE_PATH") ?: ""
-            val envPass = System.getenv("SIGNING_STORE_PASSWORD")?.takeIf { it.isNotEmpty() } ?: "androidpassword"
+            val envPass = System.getenv("SIGNING_STORE_PASSWORD")?.takeIf { it.isNotEmpty() } ?: "***PURGED***"
             val envAlias = System.getenv("SIGNING_KEY_ALIAS")?.takeIf { it.isNotEmpty() } ?: "pomodoro"
             val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD")?.takeIf { it.isNotEmpty() } ?: envPass
             val kFile = if (envPath.isNotEmpty()) file(envPath) else rootProject.file("app/keystore/release.jks")
@@ -36,7 +36,7 @@ android {
 
     buildTypes {
         debug {
-            // Default debug build configuration
+            signingConfig = signingConfigs.getByName("pomodoro")
         }
         release {
             isMinifyEnabled = true
@@ -45,7 +45,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("pomodoro")
         }
     }
 
