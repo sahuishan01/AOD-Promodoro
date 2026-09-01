@@ -62,7 +62,7 @@ jobs:
 
           echo "SIGNING_STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
           echo "SIGNING_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-          echo "SIGNING_KEY_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
 
       - name: Unit tests (timer engine, policy)
         run: ./gradlew testDebugUnitTest --console=plain

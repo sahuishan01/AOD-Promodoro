@@ -3,7 +3,6 @@ app/src/main/res/raw/*.wav
 
 # Keystores & secrets
 *.jks
-!app/keystore/release.jks
 *.keystore
 keystore.properties
 .env
