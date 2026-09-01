@@ -125,14 +125,10 @@ jobs:
           ls -la dist/
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: AOD Pomodoro ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          body: AOD Pomodoro ${{ github.ref_name }} Release
-          draft: false
-          prerelease: false
-          files: |
-            dist/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
+            gh release create "${{ github.ref_name }}" --title "AOD Pomodoro ${{ github.ref_name }}" --notes "AOD Pomodoro ${{ github.ref_name }} Release"
+
+          gh release upload "${{ github.ref_name }}" dist/* --clobber
