@@ -121,11 +121,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist
-          cp -v app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
-          cp -v app/build/outputs/apk/debug/*.apk dist/ 2>/dev/null || true
-          cp -v app/build/outputs/bundle/release/*.aab dist/ 2>/dev/null || true
-          echo "Files ready to publish:"
-          ls -la dist/
+          cp -v app/build/outputs/apk/release/*.apk dist/
+          cp -v app/build/outputs/bundle/release/*.aab dist/
+          echo "Production binaries ready to publish:"
+          ls -lh dist/
 
           shopt -s nullglob
           FILES=(dist/*.apk dist/*.aab)
@@ -135,11 +134,10 @@ jobs:
           fi
           echo "Found ${#FILES[@]} release binaries: ${FILES[*]}"
 
-          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" > /dev/null 2>&1 || \
-            gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --title "AOD Pomodoro ${{ github.ref_name }}" --notes "AOD Pomodoro ${{ github.ref_name }} Release"
-
-          for FILE in "${FILES[@]}"; do
-            echo "Uploading $FILE..."
-            gh release upload "${{ github.ref_name }}" "$FILE" --repo "${{ github.repository }}" --clobber
-            echo "✓ Uploaded $FILE"
-          done
+          gh release create "${{ github.ref_name }}" "${FILES[@]}" \
+            --repo "${{ github.repository }}" \
+            --title "AOD Pomodoro ${{ github.ref_name }}" \
+            --notes "AOD Pomodoro ${{ github.ref_name }} Release" || \
+          gh release upload "${{ github.ref_name }}" "${FILES[@]}" \
+            --repo "${{ github.repository }}" \
+            --clobber
