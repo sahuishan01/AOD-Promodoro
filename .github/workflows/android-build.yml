@@ -116,23 +116,14 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/bundle/**/*.aab
+          fail_on_unmatched_files: false
+          generate_release_notes: false
+          name: AOD Pomodoro ${{ github.ref_name }}
+          body: AOD Pomodoro ${{ github.ref_name }} Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p dist
-          find app/build/outputs/apk/release -name "*.apk" -exec cp -v {} dist/ ';' 2>/dev/null || true
-          find app/build/outputs/bundle/release -name "*.aab" -exec cp -v {} dist/ ';' 2>/dev/null || true
-          echo "Production binaries ready to publish:"
-          ls -lh dist/
-
-          shopt -s nullglob
-          FILES=(dist/*.apk dist/*.aab)
-          if [ ${#FILES[@]} -eq 0 ]; then
-            echo "::error::No release binaries found in dist/!"
-            exit 1
-          fi
-          echo "Found ${#FILES[@]} release binaries: ${FILES[*]}"
-
-          gh release create --repo "${{ github.repository }}" --title "AOD Pomodoro ${{ github.ref_name }}" --notes "AOD Pomodoro ${{ github.ref_name }} Release" "${{ github.ref_name }}" "${FILES[@]}" || \
-          gh release upload --repo "${{ github.repository }}" --clobber "${{ github.ref_name }}" "${FILES[@]}"
