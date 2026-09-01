@@ -125,22 +125,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Files in apk output directory:"
-          find app/build/outputs/apk/ -name "*.apk" || true
-          echo "Files in bundle output directory:"
-          find app/build/outputs/bundle/ -name "*.aab" || true
+          mkdir -p dist
+          cp app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
+          cp app/build/outputs/apk/debug/*.apk dist/ 2>/dev/null || true
+          cp app/build/outputs/bundle/release/*.aab dist/ 2>/dev/null || true
+          echo "Files ready to publish:"
+          ls -la dist/
 
-          gh release create "${{ github.ref_name }}" \
-            --title "${{ github.ref_name }}" \
-            --generate-notes \
-            --clobber || true
+          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
+            gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --generate-notes
 
-          for f in $(find app/build/outputs/apk/ -name "*.apk"); do
-            echo "Uploading APK: $f"
-            gh release upload "${{ github.ref_name }}" "$f" --clobber
-          done
-
-          for f in $(find app/build/outputs/bundle/ -name "*.aab"); do
-            echo "Uploading AAB: $f"
-            gh release upload "${{ github.ref_name }}" "$f" --clobber
-          done
+          gh release upload "${{ github.ref_name }}" dist/* --clobber
