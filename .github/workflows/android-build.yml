@@ -121,8 +121,17 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir -p dist
-          find app/build/outputs/ -type f \( -name "*.apk" -o -name "*.aab" \) -not -path "*/baselineProfiles/*" -exec cp -v {} dist/ \;
+          find app/build/outputs -name "*.apk" -not -path "*/baselineProfiles/*" -exec cp -v {} dist/ ';'
+          find app/build/outputs -name "*.aab" -exec cp -v {} dist/ ';'
           ls -la dist/
+
+          shopt -s nullglob
+          FILES=(dist/*.apk dist/*.aab)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "::error::No release binaries found in dist/!"
+            exit 1
+          fi
+          echo "Found ${#FILES[@]} release binaries: ${FILES[*]}"
 
           RELEASE_JSON=$(curl -s \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -155,8 +164,7 @@ jobs:
             exit 1
           fi
 
-          for FILE in dist/*.apk dist/*.aab; do
-            [ -f "$FILE" ] || continue
+          for FILE in "${FILES[@]}"; do
             FNAME=$(basename "$FILE")
             echo "Uploading $FNAME..."
             
