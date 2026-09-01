@@ -2,7 +2,8 @@ name: Android Build
 
 on:
   push:
-  pull_request:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
