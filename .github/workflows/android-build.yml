@@ -122,11 +122,25 @@ jobs:
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            app/build/outputs/apk/release/app-release.apk
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/bundle/release/app-release.aab
-          fail_on_unmatched_files: false
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Files in apk output directory:"
+          find app/build/outputs/apk/ -name "*.apk" || true
+          echo "Files in bundle output directory:"
+          find app/build/outputs/bundle/ -name "*.aab" || true
+
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            --clobber || true
+
+          for f in $(find app/build/outputs/apk/ -name "*.apk"); do
+            echo "Uploading APK: $f"
+            gh release upload "${{ github.ref_name }}" "$f" --clobber
+          done
+
+          for f in $(find app/build/outputs/bundle/ -name "*.aab"); do
+            echo "Uploading AAB: $f"
+            gh release upload "${{ github.ref_name }}" "$f" --clobber
+          done
