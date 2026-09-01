@@ -123,10 +123,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          echo "=== Searching for built binaries ==="
           mkdir -p dist
-          find . -maxdepth 6 -name "*.apk" -not -path "./dist/*" -exec cp -v {} dist/ \;
-          find . -maxdepth 6 -name "*.aab" -not -path "./dist/*" -exec cp -v {} dist/ \;
+          cp -v app/build/outputs/apk/release/*.apk dist/ || true
+          cp -v app/build/outputs/apk/debug/*.apk dist/ || true
+          cp -v app/build/outputs/bundle/release/*.aab dist/ || true
 
           echo "=== Contents of dist/ ==="
           ls -la dist/
@@ -135,9 +135,11 @@ jobs:
           RELEASE_RESP=$(curl -s \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
+            -H "User-Agent: GitHub-Actions" \
             "https://api.github.com/repos/$GH_REPO/releases/tags/${{ github.ref_name }}")
           
           RELEASE_ID=$(echo "$RELEASE_RESP" | jq -r '.id // empty')
+          UPLOAD_URL=$(echo "$RELEASE_RESP" | jq -r '.upload_url // empty' | cut -d'{' -f1)
 
           if [ -z "$RELEASE_ID" ]; then
             echo "Creating release for ${{ github.ref_name }}..."
@@ -145,22 +147,29 @@ jobs:
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               -H "Content-Type: application/json" \
+              -H "User-Agent: GitHub-Actions" \
               "https://api.github.com/repos/$GH_REPO/releases" \
               -d "{\"tag_name\":\"${{ github.ref_name }}\",\"name\":\"AOD Pomodoro ${{ github.ref_name }}\",\"draft\":false,\"prerelease\":false}")
             RELEASE_ID=$(echo "$CREATE_RESP" | jq -r '.id // empty')
+            UPLOAD_URL=$(echo "$CREATE_RESP" | jq -r '.upload_url // empty' | cut -d'{' -f1)
             echo "Created release ID: $RELEASE_ID"
           else
             echo "Found existing release ID: $RELEASE_ID"
           fi
 
-          if [ -z "$RELEASE_ID" ]; then
-            echo "::error::Failed to obtain release ID!"
+          if [ -z "$RELEASE_ID" ] || [ -z "$UPLOAD_URL" ]; then
+            echo "::error::Failed to obtain release ID or upload URL!"
             echo "Response: $RELEASE_RESP"
             exit 1
           fi
 
           # 2. Upload assets
           shopt -s nullglob
-          FILES=(dist/*.apk dist/*.aab)
+          FILES=(dist/*)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "::error::No files to publish in dist/!"
+            exit 1
+          fi
+
           echo "Uploading assets: ${FILES[*]}"
-          gh release upload "${{ github.ref_name }}" "${FILES[@]}" --clobber
+          gh release upload "${{ github.ref_name }}" "${FILES[@]}" --repo "$GH_REPO" --clobber
