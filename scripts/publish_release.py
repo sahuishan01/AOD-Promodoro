@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import time
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -68,7 +69,7 @@ def get_or_create_release(repo, tag, token):
         print(f"Created release: ID {data['id']}")
         return data
 
-    # 4. If conflict or exists, re-scan
+    # 4. If conflict, re-scan
     print(f"Create response {status}: {data}. Re-checking releases list...")
     status, releases = api_request(f"https://api.github.com/repos/{repo}/releases?per_page=50", token)
     if status == 200 and isinstance(releases, list):
@@ -80,39 +81,56 @@ def get_or_create_release(repo, tag, token):
     print(f"Failed to find or create release! Status: {status}, Data: {data}")
     sys.exit(1)
 
-def upload_file_curl(repo, release_id, upload_base, file_path, token):
+def delete_asset_if_exists(repo, release_id, fname, token):
+    status, assets = api_request(f"https://api.github.com/repos/{repo}/releases/{release_id}/assets", token)
+    if status == 200 and isinstance(assets, list):
+        for a in assets:
+            if a.get("name") == fname:
+                asset_id = a.get("id")
+                print(f"Deleting conflicting asset {fname} (ID {asset_id})...")
+                api_request(f"https://api.github.com/repos/{repo}/releases/assets/{asset_id}", token, method="DELETE")
+                time.sleep(2)
+
+def upload_file_curl(repo, release_id, upload_base, file_path, token, retries=3):
     fname = os.path.basename(file_path)
     fsize = os.path.getsize(file_path)
-    print(f"\n--- Uploading {fname} ({fsize:,} bytes) ---")
-    
     target_url = f"{upload_base}?name={urllib.parse.quote(fname)}"
-    cmd = [
-        "curl", "-s", "-S", "-L",
-        "-X", "POST",
-        "-H", f"Authorization: Bearer {token}",
-        "-H", "Accept: application/vnd.github+json",
-        "-H", "Content-Type: application/octet-stream",
-        "--data-binary", f"@{file_path}",
-        target_url
-    ]
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    if res.returncode != 0:
-        print(f"curl upload failed with code {res.returncode}:")
-        print("STDERR:", res.stderr)
-        print("STDOUT:", res.stdout)
-        sys.exit(1)
-    
-    try:
-        resp_obj = json.loads(res.stdout)
-        if "id" in resp_obj:
-            print(f"Successfully uploaded {fname}! Browser URL: {resp_obj.get('browser_download_url')}")
-            return
-        elif "errors" in resp_obj or "message" in resp_obj:
-            print(f"GitHub upload API error: {resp_obj}")
-            sys.exit(1)
-    except Exception:
-        pass
-    print(f"Upload completed: {res.stdout[:200]}")
+
+    for attempt in range(1, retries + 1):
+        print(f"\n--- Uploading {fname} ({fsize:,} bytes) [Attempt {attempt}/{retries}] ---")
+        cmd = [
+            "curl", "-s", "-S", "-L",
+            "-X", "POST",
+            "-H", f"Authorization: Bearer {token}",
+            "-H", "Accept: application/vnd.github+json",
+            "-H", "Content-Type: application/octet-stream",
+            "--data-binary", f"@{file_path}",
+            target_url
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            print(f"curl failed: {res.stderr}")
+            time.sleep(2)
+            continue
+
+        try:
+            resp_obj = json.loads(res.stdout)
+            if "id" in resp_obj and "browser_download_url" in resp_obj:
+                print(f"Successfully uploaded {fname}! URL: {resp_obj['browser_download_url']}")
+                return
+            elif "already_exists" in res.stdout or resp_obj.get("message") == "Validation Failed":
+                print(f"Asset conflict detected. Purging and retrying...")
+                delete_asset_if_exists(repo, release_id, fname, token)
+                continue
+            else:
+                print(f"Upload response: {resp_obj}")
+        except Exception:
+            print(f"Raw output: {res.stdout[:200]}")
+        
+        time.sleep(2)
+
+    print(f"Failed to upload {fname} after {retries} attempts!")
+    sys.exit(1)
 
 def main():
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
@@ -144,18 +162,11 @@ def main():
 
     print(f"Staged files to publish: {[os.path.basename(f) for f in files_to_upload]}")
 
-    # Check and delete existing assets if any
-    status, assets = api_request(f"https://api.github.com/repos/{repo}/releases/{release_id}/assets", token)
-    if status == 200 and isinstance(assets, list):
-        existing = {a["name"]: a["id"] for a in assets}
-        for fpath in files_to_upload:
-            fname = os.path.basename(fpath)
-            if fname in existing:
-                asset_id = existing[fname]
-                print(f"Deleting previous asset {fname} (id: {asset_id})...")
-                api_request(f"https://api.github.com/repos/{repo}/releases/assets/{asset_id}", token, method="DELETE")
+    # Delete any existing assets
+    for fpath in files_to_upload:
+        delete_asset_if_exists(repo, release_id, os.path.basename(fpath), token)
 
-    # Upload files with curl -L
+    # Upload files
     for fpath in files_to_upload:
         upload_file_curl(repo, release_id, upload_base, fpath, token)
 
