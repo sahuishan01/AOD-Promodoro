@@ -117,18 +117,26 @@ jobs:
           path: app/build/reports/tests/
           if-no-files-found: ignore
 
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Stage Release Assets
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
-          cp app/build/outputs/apk/debug/*.apk dist/ 2>/dev/null || true
-          cp app/build/outputs/bundle/release/*.aab dist/ 2>/dev/null || true
-          echo "Files ready to publish:"
-          ls -la dist/
+          find app/build/outputs -type f -name "*.apk" -not -path "*/baselineProfiles/*" -not -path "*/debug/*" -exec cp -v {} dist/app-release.apk ';'
+          find app/build/outputs -type f -name "*.aab" -not -path "*/baselineProfiles/*" -not -path "*/debug/*" -exec cp -v {} dist/app-release.aab ';'
+          find app/build/outputs -type f -name "*debug*.apk" -not -path "*/baselineProfiles/*" -exec cp -v {} dist/app-debug.apk ';'
+          echo "=== Verified Staged Artifacts ==="
+          ls -lh dist/
 
-          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
-            gh release create "${{ github.ref_name }}" --title "AOD Pomodoro ${{ github.ref_name }}" --generate-notes
-
-          gh release upload "${{ github.ref_name }}" dist/* --clobber
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: AOD Pomodoro ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body: AOD Pomodoro ${{ github.ref_name }} Release
+          draft: false
+          prerelease: false
+          files: |
+            dist/app-release.apk
+            dist/app-release.aab
+            dist/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
