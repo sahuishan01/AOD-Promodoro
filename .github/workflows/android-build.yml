@@ -117,7 +117,6 @@ jobs:
 
       - name: Publish GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist
@@ -127,51 +126,27 @@ jobs:
           echo "Files ready to publish:"
           ls -la dist/
 
-          python3 - << 'EOF'
-          import os, json, urllib.request
+          RELEASE_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}")
+          RELEASE_ID=$(echo "$RELEASE_DATA" | jq -r '.id // empty')
 
-          token = os.environ['GITHUB_TOKEN']
-          repo = os.environ['GITHUB_REPOSITORY']
-          tag = os.environ['GITHUB_REF_NAME']
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Creating release ${{ github.ref_name }}..."
+            RELEASE_DATA=$(curl -s -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github+json" \
+              -d "{\"tag_name\":\"${{ github.ref_name }}\",\"name\":\"AOD Pomodoro ${{ github.ref_name }}\",\"draft\":false,\"prerelease\":false,\"generate_release_notes\":true}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases")
+            RELEASE_ID=$(echo "$RELEASE_DATA" | jq -r '.id // empty')
+          fi
 
-          headers = {
-              'Authorization': f'Bearer {token}',
-              'Accept': 'application/vnd.github+json',
-              'User-Agent': 'GitHubActions'
-          }
+          echo "Release ID: $RELEASE_ID"
 
-          req = urllib.request.Request(f'https://api.github.com/repos/{repo}/releases/tags/{tag}', headers=headers)
-          try:
-              res = urllib.request.urlopen(req)
-              release = json.loads(res.read())
-              print(f"Found existing release: id={release['id']}")
-              if release.get('draft'):
-                  edit_req = urllib.request.Request(
-                      f"https://api.github.com/repos/{repo}/releases/{release['id']}",
-                      data=json.dumps({"draft": False}).encode(),
-                      headers=headers,
-                      method='PATCH'
-                  )
-                  urllib.request.urlopen(edit_req)
-                  print("Published draft release.")
-          except Exception:
-              print(f"Creating release for {tag}...")
-              create_req = urllib.request.Request(
-                  f'https://api.github.com/repos/{repo}/releases',
-                  data=json.dumps({
-                      "tag_name": tag,
-                      "name": f"AOD Pomodoro {tag}",
-                      "draft": False,
-                      "prerelease": False,
-                      "generate_release_notes": True
-                  }).encode(),
-                  headers=headers,
-                  method='POST'
-              )
-              res = urllib.request.urlopen(create_req)
-              release = json.loads(res.read())
-              print(f"Release created: id={release['id']}")
-          EOF
-
-          echo "Uploading release assets..."
-          gh release upload "${{ github.ref_name }}" dist/* --clobber
+          for f in dist/*; do
+            [ -f "$f" ] || continue
+            FNAME=$(basename "$f")
+            echo "Uploading $FNAME..."
+            curl -s -X POST \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$f" \
+              "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${FNAME}" || true
+            echo ""
+          done
