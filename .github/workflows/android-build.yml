@@ -121,24 +121,31 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "=== Staging artifacts ==="
-          mkdir -p dist
-          cp -v app/build/outputs/apk/release/app-release.apk dist/
-          cp -v app/build/outputs/apk/debug/app-debug.apk dist/
-          cp -v app/build/outputs/bundle/release/app-release.aab dist/
+          echo "=== Staging artifacts with Python ==="
+          python3 -c "
+          import os, shutil
+          os.makedirs('dist', exist_ok=True)
+          for root, dirs, files in os.walk('app/build/outputs'):
+              if 'baselineProfiles' in root or 'intermediates' in root:
+                  continue
+              for f in files:
+                  if f.endswith('.apk') or f.endswith('.aab'):
+                      src = os.path.join(root, f)
+                      dst = os.path.join('dist', f)
+                      print(f'Staging: {src} -> {dst}')
+                      shutil.copy2(src, dst)
+          print('Staged files in dist/:', os.listdir('dist'))
+          "
           ls -lh dist/
 
-          echo "=== Creating or Updating GitHub Release ==="
-          if gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            echo "Release already exists, uploading assets..."
-            gh release upload "${{ github.ref_name }}" dist/* --repo "${{ github.repository }}" --clobber
-          else
-            echo "Creating new release with assets..."
-            gh release create "${{ github.ref_name }}" dist/* \
-              --repo "${{ github.repository }}" \
-              --title "AOD Pomodoro ${{ github.ref_name }}" \
-              --notes "AOD Pomodoro ${{ github.ref_name }} Release"
-          fi
+          echo "=== Publishing / Updating Release with Assets ==="
+          gh release create "${{ github.ref_name }}" dist/* \
+            --repo "${{ github.repository }}" \
+            --title "AOD Pomodoro ${{ github.ref_name }}" \
+            --notes "AOD Pomodoro ${{ github.ref_name }} Release" || \
+          gh release upload "${{ github.ref_name }}" dist/* \
+            --repo "${{ github.repository }}" \
+            --clobber
 
-          echo "=== Verifying Uploaded Assets on Release ==="
+          echo "=== Verifying Release Assets ==="
           gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}"
