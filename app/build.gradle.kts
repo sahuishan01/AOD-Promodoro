@@ -14,8 +14,8 @@ android {
         applicationId = "com.algosculptor.pomodoro"
         minSdk = 34
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.2.9"
+        versionCode = 12
+        versionName = "0.2.10"
     }
 
     signingConfigs {
@@ -24,15 +24,13 @@ android {
             val envPass = System.getenv("SIGNING_STORE_PASSWORD")?.takeIf { it.isNotEmpty() } ?: "androidpassword"
             val envAlias = System.getenv("SIGNING_KEY_ALIAS")?.takeIf { it.isNotEmpty() } ?: "pomodoro"
             val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD")?.takeIf { it.isNotEmpty() } ?: envPass
-            val kFile = if (envPath.isNotEmpty()) file(envPath) else file("keystore/release.jks")
-            if (kFile.exists() && kFile.length() > 0L) {
-                storeFile = kFile
-                storePassword = envPass
-                keyAlias = envAlias
-                keyPassword = envKeyPass
-                enableV1Signing = true
-                enableV2Signing = true
-            }
+            val kFile = if (envPath.isNotEmpty()) file(envPath) else rootProject.file("app/keystore/release.jks")
+            storeFile = kFile
+            storePassword = envPass
+            keyAlias = envAlias
+            keyPassword = envKeyPass
+            enableV1Signing = true
+            enableV2Signing = true
         }
     }
 
@@ -47,12 +45,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            val relConfig = signingConfigs.findByName("release")
-            if (relConfig?.storeFile != null && relConfig.storeFile!!.exists()) {
-                signingConfig = relConfig
-            } else {
-                signingConfig = signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
