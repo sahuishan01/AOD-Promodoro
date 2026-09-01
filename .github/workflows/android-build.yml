@@ -128,7 +128,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view "${{ github.ref_name }}" > /dev/null 2>&1 || \
-            gh release create "${{ github.ref_name }}" --title "AOD Pomodoro ${{ github.ref_name }}" --notes "AOD Pomodoro ${{ github.ref_name }} Release"
+          gh release view --repo "${{ github.repository }}" "${{ github.ref_name }}" > /dev/null 2>&1 || \
+            gh release create --repo "${{ github.repository }}" "${{ github.ref_name }}" --title "AOD Pomodoro ${{ github.ref_name }}" --notes "AOD Pomodoro ${{ github.ref_name }} Release"
 
-          gh release upload "${{ github.ref_name }}" dist/* --clobber
+          gh release upload --repo "${{ github.repository }}" --clobber "${{ github.ref_name }}" dist/*
