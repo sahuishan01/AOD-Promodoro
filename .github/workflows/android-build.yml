@@ -174,10 +174,9 @@ jobs:
               const filePath = path.join(distDir, file);
               const data = fs.readFileSync(filePath);
               console.log(`Uploading ${file} (${(data.length / 1024 / 1024).toFixed(2)} MB)...`);
-              await github.rest.repos.uploadReleaseAsset({
-                owner,
-                repo,
-                release_id: release.id,
+              await github.request({
+                method: 'POST',
+                url: release.upload_url,
                 name: file,
                 data: data,
                 headers: {
