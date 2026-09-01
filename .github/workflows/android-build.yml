@@ -117,8 +117,8 @@ jobs:
 
       - name: Publish GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           mkdir -p dist
           cp -v app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
@@ -135,7 +135,70 @@ jobs:
           fi
           echo "Found ${#FILES[@]} release binaries: ${FILES[*]}"
 
-          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" > /dev/null 2>&1 || \
-            gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --generate-notes
+          # 1. Get or Create Release
+          RELEASE_JSON=$(curl -s \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "User-Agent: GitHub-Actions" \
+            "https://api.github.com/repos/$GH_REPO/releases/tags/${{ github.ref_name }}")
 
-          gh release upload "${{ github.ref_name }}" "${FILES[@]}" --repo "${{ github.repository }}" --clobber
+          RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id // empty')
+
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Creating release for ${{ github.ref_name }}..."
+            CREATE_JSON=$(curl -s -X POST \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
+              -H "User-Agent: GitHub-Actions" \
+              "https://api.github.com/repos/$GH_REPO/releases" \
+              -d "{\"tag_name\":\"${{ github.ref_name }}\",\"name\":\"AOD Pomodoro ${{ github.ref_name }}\",\"draft\":false,\"prerelease\":false}")
+            echo "Create response: $CREATE_JSON"
+            RELEASE_ID=$(echo "$CREATE_JSON" | jq -r '.id // empty')
+          fi
+
+          echo "Release ID: $RELEASE_ID"
+          if [ -z "$RELEASE_ID" ]; then
+            echo "::error::Could not create or find Release ID!"
+            exit 1
+          fi
+
+          # 2. Upload assets with curl
+          for FILE in "${FILES[@]}"; do
+            FNAME=$(basename "$FILE")
+            echo "Uploading $FNAME..."
+
+            ASSET_ID=$(curl -s \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "User-Agent: GitHub-Actions" \
+              "https://api.github.com/repos/$GH_REPO/releases/$RELEASE_ID/assets" | jq -r ".[] | select(.name==\"$FNAME\") | .id // empty")
+
+            if [ -n "$ASSET_ID" ]; then
+              echo "Deleting existing asset $FNAME (id=$ASSET_ID)..."
+              curl -s -X DELETE \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                -H "User-Agent: GitHub-Actions" \
+                "https://api.github.com/repos/$GH_REPO/releases/assets/$ASSET_ID"
+            fi
+
+            UPLOAD_URL="https://uploads.github.com/repos/$GH_REPO/releases/$RELEASE_ID/assets?name=$FNAME"
+            echo "POST $UPLOAD_URL"
+
+            HTTP_CODE=$(curl -s -o /tmp/upload_resp.json -w "%{http_code}" -X POST \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "User-Agent: GitHub-Actions" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$FILE" \
+              "$UPLOAD_URL")
+
+            echo "Upload HTTP Status for $FNAME: $HTTP_CODE"
+            if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+              echo "Upload error response:"
+              cat /tmp/upload_resp.json
+              exit 1
+            fi
+            echo "✓ Successfully uploaded $FNAME"
+          done
