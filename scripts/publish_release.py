@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import requests
 
 def main():
@@ -12,7 +13,7 @@ def main():
         sys.exit(1)
 
     headers = {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"token {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
@@ -50,11 +51,15 @@ def main():
             headers=headers,
             json={"tag_name": tag, "name": f"AOD Pomodoro {tag}", "body": f"AOD Pomodoro {tag} Release"},
         )
-        resp.raise_for_status()
+        if resp.status_code not in (200, 201):
+            print(f"Error creating release: {resp.status_code} {resp.text}", file=sys.stderr)
+            sys.exit(1)
         release = resp.json()
         print(f"Created release (ID {release['id']}).")
 
     release_id = release["id"]
+    upload_url_template = release.get("upload_url", f"https://uploads.github.com/repos/{repo}/releases/{release_id}/assets{{?name,label}}")
+    upload_base = upload_url_template.split("{")[0]
 
     # Map existing assets to delete before replacing
     existing_assets = {a["name"]: a["id"] for a in release.get("assets", [])}
@@ -67,24 +72,26 @@ def main():
                 f"https://api.github.com/repos/{repo}/releases/assets/{existing_assets[fname]}",
                 headers=headers,
             )
-            del_resp.raise_for_status()
+            print(f"Delete response: {del_resp.status_code}")
+            time.sleep(1)
 
         size = os.path.getsize(fpath)
         print(f"Reading {fname} into memory ({size} bytes)...")
         with open(fpath, "rb") as f:
             data = f.read()
 
-        upload_url = f"https://uploads.github.com/repos/{repo}/releases/{release_id}/assets?name={fname}"
+        target_upload_url = f"{upload_base}?name={fname}"
         upload_headers = {
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"token {token}",
             "Content-Type": "application/octet-stream",
-            "Content-Length": str(len(data)),
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
         }
-        print(f"Uploading {fname} to {upload_url}...")
-        up_resp = requests.post(upload_url, headers=upload_headers, data=data)
+        print(f"Uploading {fname} to {target_upload_url}...")
+        up_resp = requests.post(target_upload_url, headers=upload_headers, data=data)
         print(f"Upload response status: {up_resp.status_code}")
         if up_resp.status_code not in (200, 201):
-            print(f"Error uploading {fname}: {up_resp.text}", file=sys.stderr)
+            print(f"Error uploading {fname}: {up_resp.status_code} {up_resp.text}", file=sys.stderr)
             sys.exit(1)
         print(f"Successfully uploaded {fname}!")
 
