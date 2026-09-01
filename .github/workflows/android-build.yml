@@ -121,8 +121,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist
-          cp -v app/build/outputs/apk/release/*.apk dist/
-          cp -v app/build/outputs/bundle/release/*.aab dist/
+          find app/build/outputs/apk/release -name "*.apk" -exec cp -v {} dist/ ';' 2>/dev/null || true
+          find app/build/outputs/bundle/release -name "*.aab" -exec cp -v {} dist/ ';' 2>/dev/null || true
           echo "Production binaries ready to publish:"
           ls -lh dist/
 
@@ -134,10 +134,5 @@ jobs:
           fi
           echo "Found ${#FILES[@]} release binaries: ${FILES[*]}"
 
-          gh release create "${{ github.ref_name }}" "${FILES[@]}" \
-            --repo "${{ github.repository }}" \
-            --title "AOD Pomodoro ${{ github.ref_name }}" \
-            --notes "AOD Pomodoro ${{ github.ref_name }} Release" || \
-          gh release upload "${{ github.ref_name }}" "${FILES[@]}" \
-            --repo "${{ github.repository }}" \
-            --clobber
+          gh release create --repo "${{ github.repository }}" --title "AOD Pomodoro ${{ github.ref_name }}" --notes "AOD Pomodoro ${{ github.ref_name }} Release" "${{ github.ref_name }}" "${FILES[@]}" || \
+          gh release upload --repo "${{ github.repository }}" --clobber "${{ github.ref_name }}" "${FILES[@]}"
