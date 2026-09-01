@@ -124,15 +124,13 @@ jobs:
           mkdir -p dist
           find app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -not -path "*/baselineProfiles/*" -exec cp -v {} dist/ ';'
           echo "=== Staged files to publish ==="
-          ls -la dist/
+          ls -lh dist/
 
-          echo "=== Checking / Creating Release ==="
-          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" > /dev/null 2>&1 || \
-            gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --title "AOD Pomodoro ${{ github.ref_name }}" --notes "AOD Pomodoro ${{ github.ref_name }} Release"
-
-          echo "=== Uploading Assets ==="
-          for f in dist/*; do
-            [ -f "$f" ] || continue
-            echo "Uploading asset: $f"
-            gh release upload "${{ github.ref_name }}" "$f" --repo "${{ github.repository }}" --clobber
-          done
+          echo "=== Creating Release with Assets ==="
+          gh release create "${{ github.ref_name }}" dist/* \
+            --repo "${{ github.repository }}" \
+            --title "AOD Pomodoro ${{ github.ref_name }}" \
+            --notes "AOD Pomodoro ${{ github.ref_name }} Release" || \
+          gh release upload "${{ github.ref_name }}" dist/* \
+            --repo "${{ github.repository }}" \
+            --clobber
