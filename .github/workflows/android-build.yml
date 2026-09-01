@@ -17,6 +17,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -125,10 +127,12 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
-          fail_on_unmatched_files: true
-          generate_release_notes: false
           name: AOD Pomodoro ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
           body: AOD Pomodoro ${{ github.ref_name }} Release
+          draft: false
+          prerelease: false
+          files: |
+            dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
