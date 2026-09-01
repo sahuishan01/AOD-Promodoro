@@ -131,68 +131,73 @@ jobs:
           GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           python3 - << 'EOF'
-          import os, sys, urllib.request, urllib.error, json
+          import os, sys, requests
 
           token = os.environ["GITHUB_TOKEN"]
           repo = os.environ["GITHUB_REPOSITORY"]
           tag = os.environ["GITHUB_REF_NAME"]
 
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "AOD-Pomodoro"
+          }
+
           # 1. Get or Create Release
-          req = urllib.request.Request(
-              f"https://api.github.com/repos/{repo}/releases/tags/{tag}",
-              headers={"Authorization": f"token {token}", "User-Agent": "AOD-Pomodoro"}
-          )
-          try:
-              with urllib.request.urlopen(req) as resp:
-                  data = json.loads(resp.read().decode())
-                  rel_id = data["id"]
-                  print(f"Found existing release ID: {rel_id}")
-          except Exception as e:
-              print(f"Creating release for tag {tag}...")
-              create_req = urllib.request.Request(
+          resp = requests.get(f"https://api.github.com/repos/{repo}/releases/tags/{tag}", headers=headers)
+          if resp.status_code == 200:
+              rel_id = resp.json()["id"]
+              print(f"Found release ID: {rel_id}")
+          else:
+              print(f"Creating release {tag}...")
+              create_resp = requests.post(
                   f"https://api.github.com/repos/{repo}/releases",
-                  data=json.dumps({"tag_name": tag, "name": f"AOD Pomodoro {tag}", "body": f"AOD Pomodoro {tag} Release"}).encode(),
-                  headers={"Authorization": f"token {token}", "Content-Type": "application/json", "User-Agent": "AOD-Pomodoro"}
+                  headers=headers,
+                  json={"tag_name": tag, "name": f"AOD Pomodoro {tag}", "body": f"AOD Pomodoro {tag} Release"}
               )
-              with urllib.request.urlopen(create_req) as resp:
-                  data = json.loads(resp.read().decode())
-                  rel_id = data["id"]
-                  print(f"Created release ID: {rel_id}")
+              create_resp.raise_for_status()
+              rel_id = create_resp.json()["id"]
+              print(f"Created release ID: {rel_id}")
 
           # 2. Upload assets in dist/
           dist_files = sorted([os.path.join("dist", f) for f in os.listdir("dist") if f.endswith(".apk") or f.endswith(".aab")])
-          print(f"Found {len(dist_files)} assets to upload: {dist_files}")
+          print(f"Found {len(dist_files)} assets: {dist_files}")
           if not dist_files:
-              print("No assets found in dist!")
+              print("Error: no assets in dist!")
               sys.exit(1)
+
+          # Delete duplicate assets if any exist
+          assets_resp = requests.get(f"https://api.github.com/repos/{repo}/releases/{rel_id}/assets", headers=headers)
+          if assets_resp.status_code == 200:
+              existing_assets = {a["name"]: a["id"] for a in assets_resp.json()}
+              for fpath in dist_files:
+                  fname = os.path.basename(fpath)
+                  if fname in existing_assets:
+                      print(f"Deleting existing asset {fname} (ID: {existing_assets[fname]})...")
+                      requests.delete(f"https://api.github.com/repos/{repo}/releases/assets/{existing_assets[fname]}", headers=headers)
 
           for fpath in dist_files:
               fname = os.path.basename(fpath)
-              with open(fpath, "rb") as f:
-                  body = f.read()
-
+              upload_headers = {
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+                  "Content-Type": "application/octet-stream",
+                  "User-Agent": "AOD-Pomodoro"
+              }
               upload_url = f"https://uploads.github.com/repos/{repo}/releases/{rel_id}/assets?name={fname}"
-              print(f"Uploading {fname} ({len(body) / 1024 / 1024:.2f} MB)...")
+              size_mb = os.path.getsize(fpath) / 1024 / 1024
+              print(f"Uploading {fname} ({size_mb:.2f} MB)...")
 
-              up_req = urllib.request.Request(
-                  upload_url,
-                  data=body,
-                  headers={
-                      "Authorization": f"token {token}",
-                      "Content-Type": "application/octet-stream",
-                      "User-Agent": "AOD-Pomodoro"
-                  }
-              )
-              try:
-                  with urllib.request.urlopen(up_req) as resp:
-                      res_json = json.loads(resp.read().decode())
-                      print(f"✓ Uploaded {fname} (asset ID: {res_json.get('id')})")
-              except urllib.error.HTTPError as e:
-                  err_body = e.read().decode()
-                  print(f"HTTP Error {e.code}: {err_body}")
-                  if "already_exists" in err_body:
-                      print(f"{fname} already exists on release.")
-                  else:
-                      sys.exit(1)
+              with open(fpath, "rb") as f:
+                  up_resp = requests.post(upload_url, headers=upload_headers, data=f, timeout=300)
+
+              print(f"Upload response status for {fname}: {up_resp.status_code}")
+              if up_resp.status_code not in (200, 201):
+                  print(f"Error uploading {fname}: {up_resp.text}")
+                  sys.exit(1)
+              print(f"✓ Uploaded {fname} (asset ID: {up_resp.json().get('id')})")
+
           print("All release assets published successfully!")
           EOF
