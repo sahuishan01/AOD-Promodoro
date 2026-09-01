@@ -121,9 +121,7 @@ jobs:
       - name: Stage Release Assets
         run: |
           mkdir -p release-assets
-          cp -v app/build/outputs/apk/release/*.apk release-assets/aod_pomodoro-${{ github.ref_name }}-release.apk
-          cp -v app/build/outputs/apk/debug/*.apk release-assets/aod_pomodoro-${{ github.ref_name }}-debug.apk
-          cp -v app/build/outputs/bundle/release/*.aab release-assets/aod_pomodoro-${{ github.ref_name }}-release.aab
+          find app/build/outputs/ -type f \( -name "*.apk" -o -name "*.aab" \) -not -path "*/baselineProfiles/*" -exec cp -v {} release-assets/ \;
           ls -la release-assets/
 
       - name: Publish GitHub Release
@@ -134,8 +132,6 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          fail_on_unmatched_files: true
           files: |
-            release-assets/aod_pomodoro-${{ github.ref_name }}-release.apk
-            release-assets/aod_pomodoro-${{ github.ref_name }}-debug.apk
-            release-assets/aod_pomodoro-${{ github.ref_name }}-release.aab
+            release-assets/*.apk
+            release-assets/*.aab
