@@ -115,74 +115,27 @@ jobs:
           path: app/build/reports/tests/
           if-no-files-found: ignore
 
-      - name: Stage Release Assets
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist
-          find app/build/outputs -name "*.apk" -not -path "*/baselineProfiles/*" -exec cp -v {} dist/ ';'
-          find app/build/outputs -name "*.aab" -exec cp -v {} dist/ ';'
+          cp -v app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
+          cp -v app/build/outputs/apk/debug/*.apk dist/ 2>/dev/null || true
+          cp -v app/build/outputs/bundle/release/*.aab dist/ 2>/dev/null || true
+          echo "Files ready to publish:"
           ls -la dist/
 
-      - name: Publish GitHub Release
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const path = require('path');
+          shopt -s nullglob
+          FILES=(dist/*.apk dist/*.aab)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "::error::No release binaries found in dist/!"
+            exit 1
+          fi
+          echo "Found ${#FILES[@]} release binaries: ${FILES[*]}"
 
-            const tag = '${{ github.ref_name }}';
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
+          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" > /dev/null 2>&1 || \
+            gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --generate-notes
 
-            // 1. Get or create release
-            let release;
-            try {
-              const res = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
-              release = res.data;
-              console.log(`Found release ${release.id}`);
-            } catch (e) {
-              console.log(`Creating release for ${tag}...`);
-              const res = await github.rest.repos.createRelease({
-                owner,
-                repo,
-                tag_name: tag,
-                name: `AOD Pomodoro ${tag}`,
-                body: `Release ${tag}`,
-                draft: false,
-                prerelease: false
-              });
-              release = res.data;
-              console.log(`Created release ${release.id}`);
-            }
-
-            // 2. Read dist files
-            const distDir = 'dist';
-            const files = fs.readdirSync(distDir).filter(f => f.endsWith('.apk') || f.endsWith('.aab'));
-            console.log(`Files to upload: ${files.join(', ')}`);
-
-            // 3. Delete existing duplicate assets
-            const assetsRes = await github.rest.repos.listReleaseAssets({ owner, repo, release_id: release.id });
-            for (const asset of assetsRes.data) {
-              if (files.includes(asset.name)) {
-                console.log(`Deleting duplicate asset ${asset.name} (${asset.id})...`);
-                await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id });
-              }
-            }
-
-            // 4. Upload each binary
-            for (const file of files) {
-              const filePath = path.join(distDir, file);
-              const data = fs.readFileSync(filePath);
-              console.log(`Uploading ${file} (${(data.length / 1024 / 1024).toFixed(2)} MB)...`);
-              await github.request({
-                method: 'POST',
-                url: release.upload_url,
-                name: file,
-                data: data,
-                headers: {
-                  'content-type': 'application/octet-stream',
-                  'content-length': data.length
-                }
-              });
-              console.log(`✓ Uploaded ${file}`);
-            }
+          gh release upload "${{ github.ref_name }}" "${FILES[@]}" --repo "${{ github.repository }}" --clobber
