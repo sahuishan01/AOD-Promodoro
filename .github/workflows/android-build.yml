@@ -126,16 +126,19 @@ jobs:
           ls -la dist/
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: AOD Pomodoro ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          body: AOD Pomodoro ${{ github.ref_name }} Release
-          draft: false
-          prerelease: false
-          files: |
-            dist/app-release.apk
-            dist/app-debug.apk
-            dist/app-release.aab
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Creating/Updating GitHub Release ==="
+          gh release create "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --title "AOD Pomodoro ${{ github.ref_name }}" \
+            --notes "AOD Pomodoro ${{ github.ref_name }} Release" || true
+
+          echo "=== Uploading Assets ==="
+          gh release upload "${{ github.ref_name }}" dist/* \
+            --repo "${{ github.repository }}" \
+            --clobber
+
+          echo "=== Verifying Release Assets ==="
+          gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}"
