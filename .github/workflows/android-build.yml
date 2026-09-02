@@ -117,38 +117,17 @@ jobs:
           path: app/build/reports/tests/
           if-no-files-found: ignore
 
-      - name: Stage Release Assets
-        run: |
-          echo "=== Staging artifacts with Python ==="
-          python3 -c "
-          import os, shutil
-          os.makedirs('dist', exist_ok=True)
-          for root, dirs, files in os.walk('app/build/outputs'):
-              if 'baselineProfiles' in root or 'intermediates' in root:
-                  continue
-              for f in files:
-                  if f.endswith('.apk') or f.endswith('.aab'):
-                      src = os.path.join(root, f)
-                      dst = os.path.join('dist', f)
-                      print(f'Staging: {src} -> {dst}')
-                      shutil.copy2(src, dst)
-          print('Staged files in dist/:', os.listdir('dist'))
-          "
-          ls -la dist/
-
-      - name: Publish GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           name: AOD Pomodoro ${{ github.ref_name }}
+          fail_on_unmatched_files: true
           body: |
-            Automated production build for AOD Pomodoro ${{ github.ref_name }}.
-          draft: false
-          prerelease: false
+            ## AOD Pomodoro ${{ github.ref_name }}
+
+            ### Installation
+            Download the APK below and install it on your Android device.
+            You may need to enable "Install from unknown sources" in Settings.
           files: |
-            dist/app-release.apk
-            dist/app-debug.apk
-            dist/app-release.aab
-
-
-
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/debug/app-debug.apk
