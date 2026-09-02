@@ -27,7 +27,7 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:inheritShowWhenLocked="true"
-            android:screenOrientation="fullSensor"
+            android:screenOrientation="fullUser"
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode|navigation|density">
             <intent-filter>

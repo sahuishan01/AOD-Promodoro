@@ -130,28 +130,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupAutoRotateListener() {
-        orientationListener = object : OrientationEventListener(this, SensorManager.SENSOR_DELAY_UI) {
-            override fun onOrientationChanged(orientation: Int) {
-                if (orientation == ORIENTATION_UNKNOWN) return
-
-                // Hysteresis zones around 0, 90, 180, 270 degrees to prevent rapid flipping
-                val targetOrientation = when {
-                    orientation in 60..120 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
-                    orientation in 240..300 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                    orientation in 330..360 || orientation in 0..30 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                    orientation in 150..210 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
-                    else -> lastValidOrientation
-                }
-
-                if (targetOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED && requestedOrientation != targetOrientation) {
-                    lastValidOrientation = targetOrientation
-                    requestedOrientation = targetOrientation
-                }
-            }
-        }
-        if (orientationListener?.canDetectOrientation() == true) {
-            orientationListener?.enable()
-        }
+        // Handled natively by android:screenOrientation="fullUserActivity" / system WindowManager
     }
 
     private fun configureLockScreenAndScreenOn(showWhenLocked: Boolean, turnScreenOn: Boolean) {
@@ -198,18 +177,11 @@ class MainActivity : ComponentActivity() {
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         if (isImmersiveActive) setFullscreenImmersive(true)
-        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-            requestedOrientation = lastValidOrientation
-        }
     }
 
     override fun onResume() {
         super.onResume()
         if (isImmersiveActive) setFullscreenImmersive(true)
-        orientationListener?.enable()
-        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-            requestedOrientation = lastValidOrientation
-        }
         lifecycleScope.launch {
             val settings = settingsRepository.settings.first()
             if (settings.keepScreenOn) {
@@ -218,22 +190,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        // Maintain last valid orientation when transitioning to lock/screen-off
-        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-            requestedOrientation = lastValidOrientation
-        }
-    }
-
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (isImmersiveActive) {
             setFullscreenImmersive(true)
-        }
-        orientationListener?.enable()
-        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-            requestedOrientation = lastValidOrientation
         }
     }
 
