@@ -107,26 +107,24 @@ jobs:
           echo "=== AAB release ==="
           ls -la app/build/outputs/bundle/release/ 2>/dev/null || echo "NO RELEASE AAB DIR"
 
-      - name: Upload APKs
-        uses: actions/upload-artifact@v4
-        with:
-          name: aod-pomodoro-apks
-          path: app/build/outputs/apk/**/*.apk
-
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: aod-pomodoro-release-aab
-          path: app/build/outputs/bundle/release/*.aab
-          if-no-files-found: warn
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-results
-          path: app/build/reports/tests/
-          if-no-files-found: ignore
+      - name: Stage Release Assets
+        run: |
+          echo "=== Staging artifacts with Python ==="
+          python3 -c "
+          import os, shutil
+          os.makedirs('dist', exist_ok=True)
+          for root, dirs, files in os.walk('app/build/outputs'):
+              if 'baselineProfiles' in root or 'intermediates' in root:
+                  continue
+              for f in files:
+                  if f.endswith('.apk') or f.endswith('.aab'):
+                      src = os.path.join(root, f)
+                      dst = os.path.join('dist', f)
+                      print(f'Staging: {src} -> {dst}')
+                      shutil.copy2(src, dst)
+          print('Staged files in dist/:', os.listdir('dist'))
+          "
+          ls -la dist/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -140,5 +138,5 @@ jobs:
             Download the APK below and install it on your Android device.
             You may need to enable "Install from unknown sources" in Settings.
           files: |
-            app/build/outputs/apk/release/app-release.apk
-            app/build/outputs/apk/debug/app-debug.apk
+            dist/*.apk
+
