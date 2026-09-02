@@ -42,25 +42,23 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          mkdir -p "app/keystore"
-          STORE_PASS="${SIGNING_STORE_PASSWORD:-***PURGED***}"
-          KEY_ALIAS="${SIGNING_KEY_ALIAS:-pomodoro}"
-          KEY_PASS="${SIGNING_KEY_PASSWORD:-***PURGED***}"
-
-          DEFAULT_KEYSTORE_B64="***PURGED_KEYSTORE_BLOB***"
-
-          RAW_KEY="${SIGNING_KEY:-$DEFAULT_KEYSTORE_B64}"
-          echo "$RAW_KEY" | tr -d '\r\n ' | base64 -d > "app/keystore/release.jks"
-
-          if ! keytool -list -keystore "app/keystore/release.jks" -storepass "$STORE_PASS" > /dev/null 2>&1; then
-            echo "Using fallback persistent keystore..."
-            echo "$DEFAULT_KEYSTORE_B64" | tr -d '\r\n ' | base64 -d > "app/keystore/release.jks"
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::SIGNING_KEY secret is not set — cannot sign APK"
+            exit 1
           fi
+          mkdir -p "app/keystore"
+          echo "$SIGNING_KEY" | tr -d '\r\n ' | base64 -d > "app/keystore/release.jks"
+
+          if ! keytool -list -keystore "app/keystore/release.jks" -storepass "$SIGNING_STORE_PASSWORD" > /dev/null 2>&1; then
+            echo "::error::Keystore validation failed — check SIGNING_KEY and SIGNING_STORE_PASSWORD secrets"
+            exit 1
+          fi
+          echo "✅ Keystore validated successfully"
 
           echo "KEYSTORE_PATH=app/keystore/release.jks" >> "$GITHUB_ENV"
-          echo "SIGNING_STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
-          echo "SIGNING_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-          echo "SIGNING_KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+          echo "SIGNING_STORE_PASSWORD=$SIGNING_STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_ALIAS=$SIGNING_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_PASSWORD=$SIGNING_KEY_PASSWORD" >> "$GITHUB_ENV"
 
       - name: Unit tests (timer engine, policy)
         run: ./gradlew testDebugUnitTest --console=plain

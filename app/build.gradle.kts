@@ -21,9 +21,9 @@ android {
     signingConfigs {
         create("pomodoro") {
             val envPath = System.getenv("KEYSTORE_PATH") ?: ""
-            val envPass = System.getenv("SIGNING_STORE_PASSWORD")?.takeIf { it.isNotEmpty() } ?: "***PURGED***"
-            val envAlias = System.getenv("SIGNING_KEY_ALIAS")?.takeIf { it.isNotEmpty() } ?: "pomodoro"
-            val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD")?.takeIf { it.isNotEmpty() } ?: envPass
+            val envPass = System.getenv("SIGNING_STORE_PASSWORD") ?: ""
+            val envAlias = System.getenv("SIGNING_KEY_ALIAS") ?: ""
+            val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD") ?: envPass
             val kFile = if (envPath.isNotEmpty()) file(envPath) else rootProject.file("app/keystore/release.jks")
             storeFile = kFile
             storePassword = envPass
