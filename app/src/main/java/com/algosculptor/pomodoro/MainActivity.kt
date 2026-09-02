@@ -130,31 +130,33 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupAutoRotateListener() {
-        // Handled natively by android:screenOrientation="fullUserActivity" / system WindowManager
+        orientationListener = object : OrientationEventListener(this, SensorManager.SENSOR_DELAY_UI) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+
+                val targetOrientation = when {
+                    orientation in 45..135 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                    orientation in 225..315 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    orientation in 315..360 || orientation in 0..45 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    orientation in 135..225 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+                    else -> requestedOrientation
+                }
+
+                if (targetOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED && requestedOrientation != targetOrientation) {
+                    lastValidOrientation = targetOrientation
+                    requestedOrientation = targetOrientation
+                }
+            }
+        }
+        if (orientationListener?.canDetectOrientation() == true) {
+            orientationListener?.enable()
+        }
     }
 
     private fun configureLockScreenAndScreenOn(showWhenLocked: Boolean, turnScreenOn: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(showWhenLocked)
             setTurnScreenOn(turnScreenOn)
-        }
-        @Suppress("DEPRECATION")
-        if (showWhenLocked) {
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
-            )
-            window.clearFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
-        } else {
-            window.clearFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-                WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
-            )
-        }
-        @Suppress("DEPRECATION")
-        if (turnScreenOn) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
         }
     }
 
@@ -182,6 +184,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (isImmersiveActive) setFullscreenImmersive(true)
+        orientationListener?.enable()
+        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+            requestedOrientation = lastValidOrientation
+        }
         lifecycleScope.launch {
             val settings = settingsRepository.settings.first()
             if (settings.keepScreenOn) {
@@ -194,6 +200,10 @@ class MainActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (isImmersiveActive) {
             setFullscreenImmersive(true)
+        }
+        orientationListener?.enable()
+        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+            requestedOrientation = lastValidOrientation
         }
     }
 
