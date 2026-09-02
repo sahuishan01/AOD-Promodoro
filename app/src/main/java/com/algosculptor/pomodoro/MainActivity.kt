@@ -134,12 +134,13 @@ class MainActivity : ComponentActivity() {
             override fun onOrientationChanged(orientation: Int) {
                 if (orientation == ORIENTATION_UNKNOWN) return
 
+                // Hysteresis zones around 0, 90, 180, 270 degrees to prevent rapid flipping
                 val targetOrientation = when {
-                    orientation in 45..135 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
-                    orientation in 225..315 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                    orientation in 315..360 || orientation in 0..45 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                    orientation in 135..225 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
-                    else -> requestedOrientation
+                    orientation in 60..120 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                    orientation in 240..300 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    orientation in 330..360 || orientation in 0..30 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    orientation in 150..210 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+                    else -> lastValidOrientation
                 }
 
                 if (targetOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED && requestedOrientation != targetOrientation) {
@@ -214,6 +215,14 @@ class MainActivity : ComponentActivity() {
             if (settings.keepScreenOn) {
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Maintain last valid orientation when transitioning to lock/screen-off
+        if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+            requestedOrientation = lastValidOrientation
         }
     }
 
