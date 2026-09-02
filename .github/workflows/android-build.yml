@@ -126,6 +126,14 @@ jobs:
           "
           ls -la dist/
 
+      - name: Pre-flight dist check
+        run: |
+          echo "=== dist/ contents ==="
+          ls -la dist/
+          [ -f dist/app-release.apk ] || { echo "::error::app-release.apk missing from dist/"; exit 1; }
+          [ -f dist/app-debug.apk ]   || { echo "::error::app-debug.apk missing from dist/"; exit 1; }
+          [ -f dist/app-release.aab ]  || { echo "::error::app-release.aab missing from dist/"; exit 1; }
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -135,8 +143,8 @@ jobs:
             Automated production build for AOD Pomodoro ${{ github.ref_name }}.
           draft: false
           prerelease: false
-          files: |
-            dist/app-release.apk
-            dist/app-debug.apk
-            dist/app-release.aab
+          make_latest: true
+          fail_on_unmatched_files: true
+          files: dist/*
+
 
