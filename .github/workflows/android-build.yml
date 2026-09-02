@@ -65,45 +65,16 @@ jobs:
       - name: Unit tests (timer engine, policy)
         run: ./gradlew testDebugUnitTest --console=plain
 
-      - name: Assemble debug APK
+      - name: Build APKs and AAB
         env:
           KEYSTORE_PATH: "app/keystore/release.jks"
           SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
           SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
         run: |
-          set -o pipefail
-          ./gradlew assembleDebug --console=plain --stacktrace 2>&1 | tee assemble-debug.log || {
-            echo "::error::assembleDebug failed! Last 150 lines of build output:"
-            tail -n 150 assemble-debug.log
-            exit 1
-          }
-
-      - name: Assemble release APK
-        env:
-          KEYSTORE_PATH: "app/keystore/release.jks"
-          SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
-          SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
-        run: |
-          set -o pipefail
-          ./gradlew assembleRelease --console=plain --stacktrace 2>&1 | tee assemble-release.log || {
-            echo "::error::assembleRelease failed! Last 150 lines of build output:"
-            tail -n 150 assemble-release.log
-            exit 1
-          }
-
-      - name: Bundle release AAB
-        env:
-          KEYSTORE_PATH: "app/keystore/release.jks"
-          SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
-          SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
-        run: |
-          set -o pipefail
-          ./gradlew bundleRelease --console=plain --stacktrace 2>&1 | tee bundle-release.log || {
-            echo "::error::bundleRelease failed! Last 150 lines of build output:"
-            tail -n 150 bundle-release.log
+          ./gradlew assembleDebug assembleRelease bundleRelease --console=plain --stacktrace 2>&1 | tee build.log || {
+            echo "::error::Gradle build failed! Last 200 lines of build output:"
+            tail -n 200 build.log
             exit 1
           }
 
