@@ -129,22 +129,35 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var orientationChangeTimestamp = 0L
+    private var pendingOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+
     private fun setupAutoRotateListener() {
         orientationListener = object : OrientationEventListener(this, SensorManager.SENSOR_DELAY_UI) {
             override fun onOrientationChanged(orientation: Int) {
                 if (orientation == ORIENTATION_UNKNOWN) return
 
-                val targetOrientation = when {
-                    orientation in 45..135 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
-                    orientation in 225..315 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                    orientation in 315..360 || orientation in 0..45 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                    orientation in 135..225 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+                // Low sensitivity / strict tilt bounds:
+                // Landscape requires explicit 75°..105° or 255°..285° tilt
+                val rawTarget = when {
+                    orientation in 255..285 -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    orientation in 75..105 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                    orientation in 345..360 || orientation in 0..15 -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    orientation in 165..195 -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
                     else -> requestedOrientation
                 }
 
-                if (targetOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED && requestedOrientation != targetOrientation) {
-                    lastValidOrientation = targetOrientation
-                    requestedOrientation = targetOrientation
+                if (rawTarget != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED && rawTarget != requestedOrientation) {
+                    val now = System.currentTimeMillis()
+                    if (rawTarget != pendingOrientation) {
+                        pendingOrientation = rawTarget
+                        orientationChangeTimestamp = now
+                    } else if (now - orientationChangeTimestamp >= 400L) {
+                        lastValidOrientation = rawTarget
+                        requestedOrientation = rawTarget
+                    }
+                } else {
+                    pendingOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 }
             }
         }

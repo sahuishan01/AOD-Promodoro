@@ -65,7 +65,6 @@ class PlaybackController @Inject constructor(
         try {
             val mediaItem = MediaItem.Builder()
                 .setUri(uri)
-                .setMimeType(MimeTypes.AUDIO_WAV)
                 .build()
             player.repeatMode = Player.REPEAT_MODE_ONE
             player.setMediaItem(mediaItem)
