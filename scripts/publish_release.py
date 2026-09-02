@@ -120,7 +120,6 @@ def main():
     for fpath in files:
         fname = os.path.basename(fpath)
         target_url = f"{upload_base}?name={urllib.parse.quote(fname)}"
-        print(f"\n--- Uploading {fname} ({os.path.getsize(fpath):,} bytes) ---")
         cmd = [
             "curl", "-s", "-S", "-L",
             "-H", f"Authorization: Bearer {token}",
@@ -129,16 +128,20 @@ def main():
             "--data-binary", f"@{fpath}",
             target_url
         ]
+        print(f"Executing: {' '.join(cmd)}")
         res = subprocess.run(cmd, capture_output=True, text=True)
+        print(f"curl exit code: {res.returncode}")
+        print(f"curl stdout: {res.stdout[:500]}")
+        print(f"curl stderr: {res.stderr[:500]}")
         if res.returncode == 0:
             try:
                 resp = json.loads(res.stdout)
                 if "id" in resp:
                     print(f"Success! {fname} -> {resp.get('browser_download_url')}")
                     continue
-            except Exception:
-                pass
-        print(f"Error uploading {fname}: {res.stdout} {res.stderr}")
+            except Exception as e:
+                print(f"JSON parse error: {e}")
+        print(f"Error uploading {fname}: stdout={res.stdout} stderr={res.stderr}")
         sys.exit(1)
 
     print("\n=== Release Published and Verified Successfully ===")
