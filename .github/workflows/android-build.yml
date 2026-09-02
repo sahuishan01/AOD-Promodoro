@@ -57,6 +57,7 @@ jobs:
             echo "$DEFAULT_KEYSTORE_B64" | tr -d '\r\n ' | base64 -d > "app/keystore/release.jks"
           fi
 
+          echo "KEYSTORE_PATH=app/keystore/release.jks" >> "$GITHUB_ENV"
           echo "SIGNING_STORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
           echo "SIGNING_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "SIGNING_KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
