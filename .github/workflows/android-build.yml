@@ -145,7 +145,10 @@ jobs:
             Automated production build for AOD Pomodoro ${{ github.ref_name }}.
           draft: false
           prerelease: false
-          files: dist/*
+          files: |
+            dist/app-release.apk
+            dist/app-debug.apk
+            dist/app-release.aab
 
 
 
