@@ -47,6 +47,10 @@
     <string name="track_forest_stream">Forest Stream</string>
     <string name="track_deep_focus">Deep Focus Drone</string>
     <string name="track_cosmic_synth">Cosmic Synth</string>
+    <string name="track_ocean_waves">Ocean Waves</string>
+    <string name="track_gentle_stream">Gentle Stream</string>
+    <string name="track_zen_garden">Zen Singing Bowl</string>
+    <string name="track_soft_rainfall">Soft Window Rain</string>
     <string name="track_soft_chime">Soft Chime</string>
 
     <!-- Phase End Sound Settings -->

@@ -31,7 +31,7 @@ data class TimerUiState(
 class TimerViewModel @Inject constructor(
     private val engine: TimerEngine,
     private val settingsRepository: SettingsRepository,
-    private val audioRepository: AmbientAudioRepository,
+    val audioRepository: AmbientAudioRepository,
     val playback: PlaybackController,
 ) : ViewModel() {
 
@@ -118,6 +118,21 @@ class TimerViewModel @Inject constructor(
             }
             sel.startsWith("picked:") -> {
                 playback.play(Uri.parse(sel.removePrefix("picked:")), "picked", settings.volume)
+            }
+        }
+    }
+
+    fun selectAudioTrack(trackId: String) {
+        viewModelScope.launch {
+            val s = settingsRepository.settings.first()
+            if (trackId == "off") {
+                settingsRepository.setAudioSelection("off")
+                playback.stop()
+            } else {
+                val tag = "bundled:$trackId"
+                settingsRepository.setAudioSelection(tag)
+                val track = audioRepository.byId(trackId) ?: return@launch
+                playback.play(audioRepository.uriFor(track), tag, s.volume)
             }
         }
     }

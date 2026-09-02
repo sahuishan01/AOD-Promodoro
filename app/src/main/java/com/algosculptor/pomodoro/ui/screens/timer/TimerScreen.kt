@@ -230,6 +230,15 @@ fun TimerScreen(
                                 showTimeAdjustDialog = true
                             }
                         )
+                        Spacer(Modifier.height(8.dp))
+                        SoundSliderRow(
+                            currentSelection = ui.settings.audioSelection,
+                            tracks = viewModel.audioRepository.tracks,
+                            onSelectTrack = { trackId ->
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.selectAudioTrack(trackId)
+                            }
+                        )
                         Spacer(Modifier.height(4.dp))
                         if (isIdle) {
                             Text(
@@ -336,6 +345,15 @@ fun TimerScreen(
                             onClick = {
                                 lastTouchMillis = System.currentTimeMillis()
                                 showTimeAdjustDialog = true
+                            }
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        SoundSliderRow(
+                            currentSelection = ui.settings.audioSelection,
+                            tracks = viewModel.audioRepository.tracks,
+                            onSelectTrack = { trackId ->
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.selectAudioTrack(trackId)
                             }
                         )
                         Spacer(Modifier.height(8.dp))
@@ -669,6 +687,45 @@ private fun VolumeRow(
             onValueChange = onVolume,
             modifier = Modifier.width(180.dp),
         )
+    }
+}
+
+@Composable
+private fun SoundSliderRow(
+    currentSelection: String,
+    tracks: List<com.algosculptor.pomodoro.data.media.BundledTrack>,
+    onSelectTrack: (String) -> Unit,
+) {
+    val selectedId = when {
+        currentSelection == "off" -> "off"
+        currentSelection.startsWith("bundled:") -> currentSelection.removePrefix("bundled:")
+        else -> "custom"
+    }
+
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+    ) {
+        item {
+            FilterChip(
+                selected = selectedId == "off",
+                onClick = { onSelectTrack("off") },
+                label = { Text("Off") },
+            )
+        }
+        items(tracks) { track ->
+            if (track.id != "soft_chime") {
+                val isSelected = selectedId == track.id
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onSelectTrack(track.id) },
+                    label = { Text(stringResource(track.titleRes)) },
+                )
+            }
+        }
     }
 }
 

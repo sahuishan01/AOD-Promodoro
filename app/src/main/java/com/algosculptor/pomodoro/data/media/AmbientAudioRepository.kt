@@ -19,6 +19,10 @@ class AmbientAudioRepository @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     val tracks: List<BundledTrack> = listOf(
+        BundledTrack("ocean_waves", R.string.track_ocean_waves, R.raw.ocean_waves),
+        BundledTrack("soft_rainfall", R.string.track_soft_rainfall, R.raw.soft_rainfall),
+        BundledTrack("gentle_stream", R.string.track_gentle_stream, R.raw.gentle_stream),
+        BundledTrack("zen_garden", R.string.track_zen_garden, R.raw.zen_garden),
         BundledTrack("rain_drift", R.string.track_rain_drift, R.raw.rain_drift),
         BundledTrack("night_pad", R.string.track_night_pad, R.raw.night_pad),
         BundledTrack("forest_stream", R.string.track_forest_stream, R.raw.forest_stream),

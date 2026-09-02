@@ -139,6 +139,71 @@ def soft_chime() -> None:
     print(f"wrote {path} ({os.path.getsize(path)} bytes)")
 
 
+def ocean_waves() -> None:
+    """Soothing slow ocean surf with ultra-low rolling noise and gentle ebb/flow."""
+    random.seed(202)
+    state1 = 0.0
+    state2 = 0.0
+    n = SR * DUR
+    samples = []
+    for i in range(n):
+        t = i / SR
+        white = random.uniform(-1, 1)
+        state1 = 0.97 * state1 + 0.03 * white
+        state2 = 0.94 * state2 + 0.06 * white
+        # Slow swell LFO (~0.08 Hz / 12 second wave cycle)
+        swell = 0.5 + 0.5 * math.sin(2 * math.pi * t / 12.0)
+        surf = 0.65 * state1 + 0.35 * state2 * (0.4 + 0.6 * math.sin(2 * math.pi * t / 6.0))
+        samples.append(surf * (0.3 + 0.7 * swell))
+    write_wav("ocean_waves.wav", samples)
+
+
+def gentle_stream() -> None:
+    """Calming high-altitude stream with soft water trickle and warm harmonics."""
+    random.seed(303)
+    state = 0.0
+    n = SR * DUR
+    samples = []
+    for i in range(n):
+        t = i / SR
+        white = random.uniform(-1, 1)
+        state = 0.88 * state + 0.12 * white
+        lfo = 0.7 + 0.3 * math.sin(2 * math.pi * t / 3.8)
+        drone = 0.12 * math.sin(2 * math.pi * 110.0 * t) + 0.08 * math.sin(2 * math.pi * 164.81 * t)
+        samples.append((state * 0.7 + drone) * lfo)
+    write_wav("gentle_stream.wav", samples)
+
+
+def zen_garden() -> None:
+    """Peaceful singing bowl meditation pad with warm ambient resonance."""
+    n = SR * DUR
+    samples = []
+    # Pentatonic warm frequencies: F#3 (185Hz), C#4 (277.18Hz), G#4 (415.3Hz), C#5 (554.37Hz)
+    freqs = [185.0, 277.18, 415.30, 554.37]
+    weights = [0.4, 0.3, 0.2, 0.1]
+    for i in range(n):
+        t = i / SR
+        v = sum(w * math.sin(2 * math.pi * f * t + 0.15 * math.sin(2 * math.pi * t / 9.0)) for f, w in zip(freqs, weights))
+        env = 0.8 + 0.2 * math.sin(2 * math.pi * t / 16.0)
+        samples.append(v * env)
+    write_wav("zen_garden.wav", samples)
+
+
+def soft_rainfall() -> None:
+    """Soft acoustic rain on a window with low-pass filtering and subtle warmth."""
+    random.seed(404)
+    state = 0.0
+    n = SR * DUR
+    samples = []
+    for i in range(n):
+        t = i / SR
+        white = random.uniform(-1, 1)
+        state = 0.95 * state + 0.05 * white
+        lfo = 0.8 + 0.2 * math.sin(2 * math.pi * t / 5.5)
+        samples.append(state * lfo)
+    write_wav("soft_rainfall.wav", samples)
+
+
 if __name__ == "__main__":
     rain_drift()
     night_pad()
@@ -146,4 +211,9 @@ if __name__ == "__main__":
     deep_focus()
     cosmic_synth()
     soft_chime()
+    ocean_waves()
+    gentle_stream()
+    zen_garden()
+    soft_rainfall()
+
 
