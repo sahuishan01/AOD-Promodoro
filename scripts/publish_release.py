@@ -108,20 +108,31 @@ def main():
         if assets:
             time.sleep(3)
 
-    # Upload assets
+    # Upload assets via subprocess curl (natively handles 307 redirect stripping auth for S3)
+    import subprocess
     for fpath in files:
         fname = os.path.basename(fpath)
-        with open(fpath, "rb") as f:
-            content = f.read()
-
         target_url = f"{upload_base}?name={urllib.parse.quote(fname)}"
-        print(f"\n--- Uploading {fname} ({len(content):,} bytes) ---")
-        status, resp = api_call(target_url, token, data=content, method="POST", content_type="application/octet-stream")
-        if status in (200, 201) and resp and "id" in resp:
-            print(f"Success! {fname} -> {resp.get('browser_download_url')}")
-        else:
-            print(f"Error uploading {fname}: HTTP {status} {resp}")
-            sys.exit(1)
+        print(f"\n--- Uploading {fname} ({os.path.getsize(fpath):,} bytes) ---")
+        cmd = [
+            "curl", "-s", "-S",
+            "-H", f"Authorization: Bearer {token}",
+            "-H", "Accept: application/vnd.github+json",
+            "-H", "Content-Type: application/octet-stream",
+            "--data-binary", f"@{fpath}",
+            target_url
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode == 0:
+            try:
+                resp = json.loads(res.stdout)
+                if "id" in resp:
+                    print(f"Success! {fname} -> {resp.get('browser_download_url')}")
+                    continue
+            except Exception:
+                pass
+        print(f"Error uploading {fname}: {res.stdout} {res.stderr}")
+        sys.exit(1)
 
     print("\n=== Release Published and Verified Successfully ===")
 
