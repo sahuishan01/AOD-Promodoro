@@ -65,6 +65,11 @@ jobs:
         run: ./gradlew testDebugUnitTest --console=plain
 
       - name: Assemble debug APK
+        env:
+          KEYSTORE_PATH: "app/keystore/release.jks"
+          SIGNING_KEY_ALIAS: ${{ env.SIGNING_KEY_ALIAS }}
+          SIGNING_STORE_PASSWORD: ${{ env.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
         run: |
           set -o pipefail
           ./gradlew assembleDebug --console=plain --stacktrace 2>&1 | tee assemble-debug.log || {
