@@ -93,10 +93,17 @@ def main():
     upload_base = upload_url_tmpl.split("{")[0]
 
     dist_dir = "dist"
+    if not os.path.exists(dist_dir):
+        print(f"Error: {dist_dir} directory does not exist!")
+        sys.exit(1)
+
     files = sorted([
         os.path.join(dist_dir, f) for f in os.listdir(dist_dir)
         if f.endswith(".apk") or f.endswith(".aab")
     ])
+    if not files:
+        print(f"Error: No APK or AAB files found in {dist_dir} directory!")
+        sys.exit(1)
     print(f"Files to publish: {[os.path.basename(f) for f in files]}")
 
     # Check existing assets and purge
@@ -115,7 +122,7 @@ def main():
         target_url = f"{upload_base}?name={urllib.parse.quote(fname)}"
         print(f"\n--- Uploading {fname} ({os.path.getsize(fpath):,} bytes) ---")
         cmd = [
-            "curl", "-s", "-S",
+            "curl", "-s", "-S", "-L",
             "-H", f"Authorization: Bearer {token}",
             "-H", "Accept: application/vnd.github+json",
             "-H", "Content-Type: application/octet-stream",
