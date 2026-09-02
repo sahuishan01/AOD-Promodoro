@@ -115,33 +115,58 @@ def main():
         if assets:
             time.sleep(3)
 
-    # Upload assets via subprocess curl (natively handles 307 redirect stripping auth for S3)
+    # Upload assets: 2-step upload or stripping Authorization header on redirect
     import subprocess
     for fpath in files:
         fname = os.path.basename(fpath)
         target_url = f"{upload_base}?name={urllib.parse.quote(fname)}"
-        cmd = [
-            "curl", "-s", "-S", "-L",
+        print(f"\n--- Uploading {fname} ({os.path.getsize(fpath):,} bytes) ---")
+        
+        # Step 1: Get release asset upload redirect/URL from GitHub API without auto-following
+        headers = [
             "-H", f"Authorization: Bearer {token}",
             "-H", "Accept: application/vnd.github+json",
             "-H", "Content-Type: application/octet-stream",
-            "--data-binary", f"@{fpath}",
-            target_url
         ]
-        print(f"Executing: {' '.join(cmd)}")
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        print(f"curl exit code: {res.returncode}")
-        print(f"curl stdout: {res.stdout[:500]}")
-        print(f"curl stderr: {res.stderr[:500]}")
-        if res.returncode == 0:
+        cmd_init = ["curl", "-s", "-S", "-i"] + headers + ["-X", "POST", "--data-binary", f"@{fpath}", target_url]
+        print(f"Executing GitHub Upload request for {fname}...")
+        res = subprocess.run(cmd_init, capture_output=True, text=True)
+        
+        # If GitHub returned direct 201 Created JSON
+        if "201 Created" in res.stdout or '"id":' in res.stdout:
             try:
-                resp = json.loads(res.stdout)
+                json_part = res.stdout.split("\r\n\r\n")[-1]
+                resp = json.loads(json_part)
                 if "id" in resp:
                     print(f"Success! {fname} -> {resp.get('browser_download_url')}")
                     continue
             except Exception as e:
-                print(f"JSON parse error: {e}")
-        print(f"Error uploading {fname}: stdout={res.stdout} stderr={res.stderr}")
+                print(f"Direct JSON parse attempt: {e}")
+
+        # If HTTP 307 redirect to S3, extract Location header and upload without auth token
+        location = None
+        for line in res.stdout.splitlines():
+            if line.lower().startswith("location:"):
+                location = line.split(":", 1)[1].strip()
+                break
+
+        if location:
+            print(f"Following 307 redirect to S3 without Bearer token...")
+            s3_cmd = ["curl", "-s", "-S", "-X", "POST", "--data-binary", f"@{fpath}", location]
+            s3_res = subprocess.run(s3_cmd, capture_output=True, text=True)
+            if s3_res.returncode == 0:
+                try:
+                    resp = json.loads(s3_res.stdout)
+                    if "id" in resp:
+                        print(f"Success via S3! {fname} -> {resp.get('browser_download_url')}")
+                        continue
+                except Exception:
+                    print(f"S3 response output: {s3_res.stdout[:300]}")
+                    if s3_res.returncode == 0 and not s3_res.stderr:
+                        print(f"Success uploading {fname} to S3!")
+                        continue
+
+        print(f"Error uploading {fname}:\nSTDOUT:\n{res.stdout[:1000]}\nSTDERR:\n{res.stderr[:1000]}")
         sys.exit(1)
 
     print("\n=== Release Published and Verified Successfully ===")
