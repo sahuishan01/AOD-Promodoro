@@ -131,5 +131,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "=== Publishing Release with GitHub CLI ==="
-          gh release create "${{ github.ref_name }}" dist/* --title "AOD Pomodoro ${{ github.ref_name }}" --notes "Automated production build for AOD Pomodoro ${{ github.ref_name }}." --clobber
+          gh release delete "${{ github.ref_name }}" --yes || true
+          gh release create "${{ github.ref_name }}" dist/app-release.apk dist/app-debug.apk dist/app-release.aab --title "AOD Pomodoro ${{ github.ref_name }}" --notes "Automated production build for AOD Pomodoro ${{ github.ref_name }}."
 
