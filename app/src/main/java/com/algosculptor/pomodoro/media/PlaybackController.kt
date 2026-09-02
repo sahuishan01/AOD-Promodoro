@@ -67,6 +67,7 @@ class PlaybackController @Inject constructor(
                 .setUri(uri)
                 .setMimeType(MimeTypes.AUDIO_WAV)
                 .build()
+            player.repeatMode = Player.REPEAT_MODE_ONE
             player.setMediaItem(mediaItem)
             player.volume = volume.coerceIn(0f, 1f)
             player.prepare()
@@ -74,6 +75,37 @@ class PlaybackController @Inject constructor(
             _state.update { it.copy(activeSource = sourceTag, volume = player.volume, isPlaying = true) }
         } catch (e: Exception) {
             Timber.e(e, "Error playing audio from $uri")
+        }
+    }
+
+    fun playOnce(uri: Uri, volume: Float) {
+        try {
+            val sfxPlayer = ExoPlayer.Builder(context)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(C.AUDIO_CONTENT_TYPE_SONIFICATION)
+                        .setUsage(C.USAGE_ASSISTANCE_SONIFICATION)
+                        .build(),
+                    false
+                )
+                .build()
+            val mediaItem = MediaItem.Builder()
+                .setUri(uri)
+                .setMimeType(MimeTypes.AUDIO_WAV)
+                .build()
+            sfxPlayer.setMediaItem(mediaItem)
+            sfxPlayer.volume = volume.coerceIn(0f, 1f)
+            sfxPlayer.addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED) {
+                        sfxPlayer.release()
+                    }
+                }
+            })
+            sfxPlayer.prepare()
+            sfxPlayer.play()
+        } catch (e: Exception) {
+            Timber.e(e, "Error playing one-shot audio from $uri")
         }
     }
 

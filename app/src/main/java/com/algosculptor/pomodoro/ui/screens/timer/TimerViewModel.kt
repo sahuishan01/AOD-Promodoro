@@ -35,6 +35,25 @@ class TimerViewModel @Inject constructor(
     val playback: PlaybackController,
 ) : ViewModel() {
 
+    private var previousPhase: TimerPhase? = null
+
+    init {
+        viewModelScope.launch {
+            engine.snapshot.collect { snap ->
+                val prev = previousPhase
+                val curr = snap.phase
+                previousPhase = curr
+
+                if (prev != null && prev.isRunning && prev != curr) {
+                    val settings = settingsRepository.settings.first()
+                    if (settings.phaseEndSound == "chime") {
+                        playback.playOnce(audioRepository.completionChimeUri(), settings.volume)
+                    }
+                }
+            }
+        }
+    }
+
     val uiState: StateFlow<TimerUiState> = combine(
         engine.snapshot,
         settingsRepository.settings,

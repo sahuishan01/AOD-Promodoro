@@ -21,9 +21,16 @@ class AmbientAudioRepository @Inject constructor(
     val tracks: List<BundledTrack> = listOf(
         BundledTrack("rain_drift", R.string.track_rain_drift, R.raw.rain_drift),
         BundledTrack("night_pad", R.string.track_night_pad, R.raw.night_pad),
+        BundledTrack("forest_stream", R.string.track_forest_stream, R.raw.forest_stream),
+        BundledTrack("deep_focus", R.string.track_deep_focus, R.raw.deep_focus),
+        BundledTrack("cosmic_synth", R.string.track_cosmic_synth, R.raw.cosmic_synth),
+        BundledTrack("soft_chime", R.string.track_soft_chime, R.raw.soft_chime),
     )
 
     fun byId(id: String): BundledTrack? = tracks.find { it.id == id }
+
+    fun completionChimeUri(): Uri =
+        Uri.parse("android.resource://${context.packageName}/${R.raw.soft_chime}")
 
     fun uriFor(track: BundledTrack): Uri =
         Uri.parse("android.resource://${context.packageName}/${track.rawRes}")

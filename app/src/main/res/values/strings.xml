@@ -44,6 +44,15 @@
     <!-- Bundled tracks -->
     <string name="track_rain_drift">Rain Drift</string>
     <string name="track_night_pad">Night Pad</string>
+    <string name="track_forest_stream">Forest Stream</string>
+    <string name="track_deep_focus">Deep Focus Drone</string>
+    <string name="track_cosmic_synth">Cosmic Synth</string>
+    <string name="track_soft_chime">Soft Chime</string>
+
+    <!-- Phase End Sound Settings -->
+    <string name="settings_phase_end_sound">Phase transition sound</string>
+    <string name="settings_phase_end_sound_none">None</string>
+    <string name="settings_phase_end_sound_chime">Soft Chime</string>
 
     <!-- Quick Time Edit -->
     <string name="quick_edit_focus_title">Focus Duration</string>

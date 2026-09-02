@@ -24,6 +24,8 @@ data class AppSettings(
     val backgroundId: String = "bundled:midnight",
     /** "bundled:<trackId>", "picked:<uri>", or "off" */
     val audioSelection: String = "off",
+    /** "chime" or "off" */
+    val phaseEndSound: String = "chime",
     val autoDimEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
     val keepScreenOn: Boolean = true,
@@ -40,6 +42,7 @@ class SettingsRepository @Inject constructor(
         val VOLUME = floatPreferencesKey("volume")
         val BACKGROUND = stringPreferencesKey("background_id")
         val AUDIO = stringPreferencesKey("audio_selection")
+        val PHASE_END_SOUND = stringPreferencesKey("phase_end_sound")
         val AUTO_DIM = booleanPreferencesKey("auto_dim")
         val HAPTICS = booleanPreferencesKey("haptics")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
@@ -53,6 +56,7 @@ class SettingsRepository @Inject constructor(
             volume = (p[Keys.VOLUME] ?: 0.6f).coerceIn(0f, 1f),
             backgroundId = p[Keys.BACKGROUND] ?: "bundled:midnight",
             audioSelection = p[Keys.AUDIO] ?: "off",
+            phaseEndSound = p[Keys.PHASE_END_SOUND] ?: "chime",
             autoDimEnabled = p[Keys.AUTO_DIM] ?: true,
             hapticsEnabled = p[Keys.HAPTICS] ?: true,
             keepScreenOn = p[Keys.KEEP_SCREEN_ON] ?: true,
@@ -65,6 +69,7 @@ class SettingsRepository @Inject constructor(
     suspend fun setVolume(v: Float) = dataStore.edit { it[Keys.VOLUME] = v.coerceIn(0f, 1f) }
     suspend fun setBackground(id: String) = dataStore.edit { it[Keys.BACKGROUND] = id }
     suspend fun setAudioSelection(sel: String) = dataStore.edit { it[Keys.AUDIO] = sel }
+    suspend fun setPhaseEndSound(sound: String) = dataStore.edit { it[Keys.PHASE_END_SOUND] = sound }
     suspend fun setAutoDim(enabled: Boolean) = dataStore.edit { it[Keys.AUTO_DIM] = enabled }
     suspend fun setHaptics(enabled: Boolean) = dataStore.edit { it[Keys.HAPTICS] = enabled }
     suspend fun setKeepScreenOn(enabled: Boolean) = dataStore.edit { it[Keys.KEEP_SCREEN_ON] = enabled }

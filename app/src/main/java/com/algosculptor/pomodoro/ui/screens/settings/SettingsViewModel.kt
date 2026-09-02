@@ -49,6 +49,7 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.setVolume(v)
         playback.setVolume(v)
     }
+    fun setPhaseEndSound(v: String) = viewModelScope.launch { settingsRepository.setPhaseEndSound(v) }
     fun setAutoDim(v: Boolean) = viewModelScope.launch { settingsRepository.setAutoDim(v) }
     fun setHaptics(v: Boolean) = viewModelScope.launch { settingsRepository.setHaptics(v) }
     fun setKeepScreenOn(v: Boolean) = viewModelScope.launch { settingsRepository.setKeepScreenOn(v) }

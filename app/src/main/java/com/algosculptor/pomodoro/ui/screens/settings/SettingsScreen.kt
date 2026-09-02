@@ -202,6 +202,19 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(24.dp))
+            SectionTitle(stringResource(R.string.settings_phase_end_sound))
+            AudioOption(
+                label = stringResource(R.string.settings_phase_end_sound_none),
+                selected = settings.phaseEndSound == "off",
+                onSelect = { viewModel.setPhaseEndSound("off") },
+            )
+            AudioOption(
+                label = stringResource(R.string.settings_phase_end_sound_chime),
+                selected = settings.phaseEndSound == "chime",
+                onSelect = { viewModel.setPhaseEndSound("chime") },
+            )
+
+            Spacer(Modifier.height(24.dp))
             ToggleRow(
                 label = stringResource(R.string.settings_keep_screen_on),
                 checked = settings.keepScreenOn,
