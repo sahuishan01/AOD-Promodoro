@@ -145,6 +145,9 @@ jobs:
           prerelease: false
           make_latest: true
           fail_on_unmatched_files: true
-          files: dist/*
+          files: |
+            dist/app-release.apk
+            dist/app-debug.apk
+            dist/app-release.aab
 
 
