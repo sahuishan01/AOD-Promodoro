@@ -162,12 +162,9 @@ class MainActivity : ComponentActivity() {
         if (showWhenLocked) {
             window.addFlags(
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-                WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON or
-                WindowManager.LayoutParams.FLAG_FULLSCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
             )
+            window.clearFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
         } else {
             window.clearFlags(
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
@@ -262,7 +259,10 @@ private fun AppNav(setImmersive: (Boolean) -> Unit) {
                 setImmersive(false)
                 onDispose { setImmersive(true) }
             }
-            SettingsScreen(onBack = { nav.popBackStack() })
+            SettingsScreen(onBack = {
+                setImmersive(true)
+                nav.popBackStack()
+            })
         }
     }
 }
