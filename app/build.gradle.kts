@@ -14,8 +14,8 @@ android {
         applicationId = "com.algosculptor.pomodoro"
         minSdk = 34
         targetSdk = 35
-        versionCode = 116
-        versionName = "0.2.114"
+        versionCode = 117
+        versionName = "0.2.115"
     }
 
     signingConfigs {
@@ -24,7 +24,7 @@ android {
             val envPass = System.getenv("SIGNING_STORE_PASSWORD") ?: ""
             val envAlias = System.getenv("SIGNING_KEY_ALIAS") ?: ""
             val envKeyPass = System.getenv("SIGNING_KEY_PASSWORD") ?: envPass
-            val kFile = if (envPath.isNotEmpty()) file(envPath) else rootProject.file("app/keystore/release.jks")
+            val kFile = if (envPath.isNotEmpty()) rootProject.file(envPath) else rootProject.file("app/keystore/release.jks")
             storeFile = kFile
             storePassword = envPass
             keyAlias = envAlias
