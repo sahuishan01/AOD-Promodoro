@@ -96,6 +96,17 @@ jobs:
             exit 1
           }
 
+      - name: Verify build outputs
+        run: |
+          echo "=== All build outputs ==="
+          find app/build/outputs -type f -name "*.apk" -o -name "*.aab" | sort
+          echo "=== APK release ==="
+          ls -la app/build/outputs/apk/release/ 2>/dev/null || echo "NO RELEASE APK DIR"
+          echo "=== APK debug ==="
+          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "NO DEBUG APK DIR"
+          echo "=== AAB release ==="
+          ls -la app/build/outputs/bundle/release/ 2>/dev/null || echo "NO RELEASE AAB DIR"
+
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
