@@ -127,16 +127,7 @@ jobs:
           ls -la dist/
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: AOD Pomodoro ${{ github.ref_name }}
-          fail_on_unmatched_files: true
-          body: |
-            ## AOD Pomodoro ${{ github.ref_name }}
-
-            ### Installation
-            Download the APK below and install it on your Android device.
-            You may need to enable "Install from unknown sources" in Settings.
-          files: |
-            dist/*.apk
-
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/publish_release.py

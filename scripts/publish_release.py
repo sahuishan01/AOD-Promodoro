@@ -7,6 +7,13 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
+class NoAuthRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_req and "Authorization" in new_req.headers:
+            del new_req.headers["Authorization"]
+        return new_req
+
 def api_call(url, token, data=None, method="GET", content_type="application/json"):
     headers = {
         "Authorization": f"Bearer {token}",
@@ -25,8 +32,9 @@ def api_call(url, token, data=None, method="GET", content_type="application/json
             headers["Content-Length"] = str(len(data))
 
     req = urllib.request.Request(url, data=payload, headers=headers, method=method)
+    opener = urllib.request.build_opener(NoAuthRedirectHandler())
     try:
-        with urllib.request.urlopen(req) as resp:
+        with opener.open(req) as resp:
             body = resp.read()
             if body:
                 return resp.status, json.loads(body.decode("utf-8"))
