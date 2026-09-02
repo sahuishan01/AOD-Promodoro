@@ -121,48 +121,18 @@ def main():
         fname = os.path.basename(fpath)
         target_url = f"{upload_base}?name={urllib.parse.quote(fname)}"
         print(f"\n--- Uploading {fname} ({os.path.getsize(fpath):,} bytes) ---")
-        
-        # Step 1: Get release asset upload redirect/URL from GitHub API without auto-following
-        headers = [
-            "-H", f"Authorization: Bearer {token}",
-            "-H", "Accept: application/vnd.github+json",
-            "-H", "Content-Type: application/octet-stream",
-        ]
-        cmd_init = ["curl", "-s", "-S", "-i"] + headers + ["-X", "POST", "--data-binary", f"@{fpath}", target_url]
-        print(f"Executing GitHub Upload request for {fname}...")
-        res = subprocess.run(cmd_init, capture_output=True, text=True)
-        
-        # If GitHub returned direct 201 Created JSON
-        if "201 Created" in res.stdout or '"id":' in res.stdout:
-            try:
-                json_part = res.stdout.split("\r\n\r\n")[-1]
-                resp = json.loads(json_part)
-                if "id" in resp:
-                    print(f"Success! {fname} -> {resp.get('browser_download_url')}")
-                    continue
-            except Exception as e:
-                print(f"Direct JSON parse attempt: {e}")
+        with open(fpath, "rb") as f:
+            content = f.read()
 
-        # If HTTP 307 redirect to S3, extract Location header and upload without auth token
-        location = None
-        for line in res.stdout.splitlines():
-            if line.lower().startswith("location:"):
-                location = line.split(":", 1)[1].strip()
-                break
-
-        if location:
-            print(f"Following 307 redirect to S3 without Bearer token...")
-            s3_cmd = ["curl", "-s", "-S", "-i", "-H", "Content-Type: application/octet-stream", "-X", "PUT", "--data-binary", f"@{fpath}", location]
-            s3_res = subprocess.run(s3_cmd, capture_output=True, text=True)
-            print(f"S3 response header line: {s3_res.stdout.splitlines()[0] if s3_res.stdout else 'EMPTY'}")
-            if "HTTP/1.1 200" in s3_res.stdout or "HTTP/2 200" in s3_res.stdout or "HTTP/1.1 201" in s3_res.stdout or "HTTP/2 201" in s3_res.stdout:
-                print(f"Success uploading {fname} to S3!")
+        status, resp = api_call(target_url, token, data=content, method="POST", content_type="application/octet-stream")
+        if status in (200, 201) and resp and "id" in resp:
+            print(f"Success! {fname} -> {resp.get('browser_download_url')}")
+        else:
+            print(f"Upload response status {status}: {resp}")
+            if status == 200 or status == 201 or (resp and isinstance(resp, dict) and "id" in resp):
+                print(f"Success uploading {fname}!")
                 continue
-            else:
-                print(f"S3 upload error response:\n{s3_res.stdout[:1000]}")
-
-        print(f"Error uploading {fname}:\nSTDOUT:\n{res.stdout[:1000]}\nSTDERR:\n{res.stderr[:1000]}")
-        sys.exit(1)
+            sys.exit(1)
 
     print("\n=== Release Published and Verified Successfully ===")
 
