@@ -152,19 +152,11 @@ def main():
 
         if location:
             print(f"Following 307 redirect to S3 without Bearer token...")
-            s3_cmd = ["curl", "-s", "-S", "-X", "POST", "--data-binary", f"@{fpath}", location]
+            s3_cmd = ["curl", "-s", "-S", "-i", "-X", "PUT", "--data-binary", f"@{fpath}", location]
             s3_res = subprocess.run(s3_cmd, capture_output=True, text=True)
-            if s3_res.returncode == 0:
-                try:
-                    resp = json.loads(s3_res.stdout)
-                    if "id" in resp:
-                        print(f"Success via S3! {fname} -> {resp.get('browser_download_url')}")
-                        continue
-                except Exception:
-                    print(f"S3 response output: {s3_res.stdout[:300]}")
-                    if s3_res.returncode == 0 and not s3_res.stderr:
-                        print(f"Success uploading {fname} to S3!")
-                        continue
+            if "200 OK" in s3_res.stdout or "201 Created" in s3_res.stdout or s3_res.returncode == 0:
+                print(f"Success uploading {fname} to S3!")
+                continue
 
         print(f"Error uploading {fname}:\nSTDOUT:\n{res.stdout[:1000]}\nSTDERR:\n{res.stderr[:1000]}")
         sys.exit(1)
