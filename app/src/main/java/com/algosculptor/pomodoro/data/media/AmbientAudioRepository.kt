@@ -22,12 +22,11 @@ class AmbientAudioRepository @Inject constructor(
         BundledTrack("ocean_waves", R.string.track_ocean_waves, R.raw.ocean_waves),
         BundledTrack("soft_rainfall", R.string.track_soft_rainfall, R.raw.soft_rainfall),
         BundledTrack("gentle_stream", R.string.track_gentle_stream, R.raw.gentle_stream),
+        BundledTrack("campfire", R.string.track_campfire, R.raw.campfire),
+        BundledTrack("clock_ticking", R.string.track_clock_ticking, R.raw.clock_ticking),
+        BundledTrack("brown_noise", R.string.track_brown_noise, R.raw.brown_noise),
+        BundledTrack("forest_birds", R.string.track_forest_birds, R.raw.forest_birds),
         BundledTrack("zen_garden", R.string.track_zen_garden, R.raw.zen_garden),
-        BundledTrack("rain_drift", R.string.track_rain_drift, R.raw.rain_drift),
-        BundledTrack("night_pad", R.string.track_night_pad, R.raw.night_pad),
-        BundledTrack("forest_stream", R.string.track_forest_stream, R.raw.forest_stream),
-        BundledTrack("deep_focus", R.string.track_deep_focus, R.raw.deep_focus),
-        BundledTrack("cosmic_synth", R.string.track_cosmic_synth, R.raw.cosmic_synth),
         BundledTrack("soft_chime", R.string.track_soft_chime, R.raw.soft_chime),
     )
 
