@@ -42,12 +42,12 @@
     <string name="notif_permission_rationale">Notifications let the timer keep you posted while the app is in the background.</string>
 
     <!-- Bundled tracks -->
-    <string name="track_ocean_waves">Ocean Waves</string>
-    <string name="track_soft_rainfall">Soft Window Rain</string>
-    <string name="track_gentle_stream">Mountain Stream</string>
+    <string name="track_ocean_waves">Ocean Surf Waves</string>
+    <string name="track_soft_rainfall">Window Rainstorm</string>
+    <string name="track_gentle_stream">Mountain Waterfall</string>
     <string name="track_campfire">Campfire Crackle</string>
-    <string name="track_clock_ticking">Clock Ticking</string>
-    <string name="track_brown_noise">Brown Noise Static</string>
+    <string name="track_clock_ticking">Grandfather Clock</string>
+    <string name="track_brown_noise">Kitchen Egg Timer</string>
     <string name="track_forest_birds">Forest Birdsong</string>
     <string name="track_zen_garden">Zen Singing Bowl</string>
     <string name="track_soft_chime">Soft Chime</string>

@@ -26,7 +26,7 @@ class AmbientAudioRepository @Inject constructor(
         BundledTrack("clock_ticking", R.string.track_clock_ticking, R.raw.clock_ticking),
         BundledTrack("brown_noise", R.string.track_brown_noise, R.raw.brown_noise),
         BundledTrack("forest_birds", R.string.track_forest_birds, R.raw.forest_birds),
-        BundledTrack("zen_garden", R.string.track_zen_garden, R.raw.zen_garden),
+        BundledTrack("zen_garden", R.string.track_zen_garden, R.raw.zen_bowl),
         BundledTrack("soft_chime", R.string.track_soft_chime, R.raw.soft_chime),
     )
 
