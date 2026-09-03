@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var engine: TimerEngine
     @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var playback: com.algosculptor.pomodoro.media.PlaybackController
 
     private var orientationListener: OrientationEventListener? = null
     private var lastValidOrientation: Int = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
@@ -228,6 +229,14 @@ class MainActivity : ComponentActivity() {
         orientationListener?.enable()
         if (lastValidOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
             requestedOrientation = lastValidOrientation
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // If timer is not running, stop audio preview playback when app is minimized
+        if (!engine.snapshot.value.phase.isRunning) {
+            playback.stop()
         }
     }
 

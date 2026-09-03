@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.minutes
@@ -108,6 +111,8 @@ class TimerViewModel @Inject constructor(
         }
     }
 
+    private var previewJob: Job? = null
+
     fun applyAudioSelection(settings: AppSettings) {
         val sel = settings.audioSelection
         when {
@@ -125,6 +130,7 @@ class TimerViewModel @Inject constructor(
     fun selectAudioTrack(trackId: String) {
         viewModelScope.launch {
             val s = settingsRepository.settings.first()
+            previewJob?.cancel()
             if (trackId == "off") {
                 settingsRepository.setAudioSelection("off")
                 playback.stop()
@@ -133,6 +139,14 @@ class TimerViewModel @Inject constructor(
                 settingsRepository.setAudioSelection(tag)
                 val track = audioRepository.byId(trackId) ?: return@launch
                 playback.play(audioRepository.uriFor(track), tag, s.volume)
+
+                // If timer is not currently running, limit preview playback to 5 seconds
+                if (!engine.snapshot.value.phase.isRunning) {
+                    previewJob = viewModelScope.launch {
+                        delay(5000)
+                        playback.stop()
+                    }
+                }
             }
         }
     }
