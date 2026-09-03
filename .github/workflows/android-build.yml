@@ -29,8 +29,6 @@ jobs:
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0" || true
 
-      - name: Generate bundled ambient assets
-        run: python3 scripts/gen_audio.py
 
       - name: Make gradlew executable
         run: chmod +x gradlew
