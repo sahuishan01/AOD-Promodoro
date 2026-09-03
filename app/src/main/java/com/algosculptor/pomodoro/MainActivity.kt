@@ -194,6 +194,17 @@ class MainActivity : ComponentActivity() {
         if (isImmersiveActive) setFullscreenImmersive(true)
     }
 
+    override fun onStart() {
+        super.onStart()
+        lifecycleScope.launch {
+            val settings = settingsRepository.settings.first()
+            val snap = engine.snapshot.value
+            if (snap.phase.isRunning && settings.showWhenLocked) {
+                configureLockScreenAndScreenOn(showWhenLocked = true, turnScreenOn = true)
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         if (isImmersiveActive) setFullscreenImmersive(true)
