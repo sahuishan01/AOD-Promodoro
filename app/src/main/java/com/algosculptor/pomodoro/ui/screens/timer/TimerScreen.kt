@@ -224,7 +224,7 @@ fun TimerScreen(
                             ),
                             contentDescription = stringResource(R.string.cd_timer_clock),
                             dimmed = dimmed,
-                            fontSize = 72.sp,
+                            fontSize = 100.sp,
                             onClick = {
                                 lastTouchMillis = System.currentTimeMillis()
                                 showTimeAdjustDialog = true
@@ -342,6 +342,7 @@ fun TimerScreen(
                             ),
                             contentDescription = stringResource(R.string.cd_timer_clock),
                             dimmed = dimmed,
+                            fontSize = 120.sp,
                             onClick = {
                                 lastTouchMillis = System.currentTimeMillis()
                                 showTimeAdjustDialog = true
@@ -696,37 +697,30 @@ private fun SoundSliderRow(
     tracks: List<com.algosculptor.pomodoro.data.media.BundledTrack>,
     onSelectTrack: (String) -> Unit,
 ) {
-    val selectedId = when {
+    val currentTrackId = when {
         currentSelection == "off" -> "off"
         currentSelection.startsWith("bundled:") -> currentSelection.removePrefix("bundled:")
-        else -> "custom"
+        else -> "off"
     }
 
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-    ) {
-        item {
-            FilterChip(
-                selected = selectedId == "off",
-                onClick = { onSelectTrack("off") },
-                label = { Text("Off") },
-            )
-        }
-        items(tracks) { track ->
-            if (track.id != "soft_chime") {
-                val isSelected = selectedId == track.id
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onSelectTrack(track.id) },
-                    label = { Text(stringResource(track.titleRes)) },
-                )
-            }
-        }
+    val availableTracks = listOf("off") + tracks.filter { it.id != "soft_chime" }.map { it.id }
+    val currentIndex = availableTracks.indexOf(currentTrackId).let { if (it < 0) 0 else it }
+
+    val label = if (currentTrackId == "off") {
+        "Sound: Off"
+    } else {
+        val t = tracks.find { it.id == currentTrackId }
+        if (t != null) "♫ ${stringResource(t.titleRes)}" else "Sound: Off"
     }
+
+    FilterChip(
+        selected = currentTrackId != "off",
+        onClick = {
+            val nextIndex = (currentIndex + 1) % availableTracks.size
+            onSelectTrack(availableTracks[nextIndex])
+        },
+        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+    )
 }
 
 
