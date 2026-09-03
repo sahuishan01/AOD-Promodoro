@@ -230,24 +230,7 @@ fun TimerScreen(
                                 showTimeAdjustDialog = true
                             }
                         )
-                        Spacer(Modifier.height(8.dp))
-                        SoundSliderRow(
-                            currentSelection = ui.settings.audioSelection,
-                            tracks = viewModel.audioRepository.tracks,
-                            onSelectTrack = { trackId ->
-                                lastTouchMillis = System.currentTimeMillis()
-                                viewModel.selectAudioTrack(trackId)
-                            }
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        BrightnessSliderRow(
-                            brightness = ui.settings.screenBrightness,
-                            onBrightnessChange = { b ->
-                                lastTouchMillis = System.currentTimeMillis()
-                                viewModel.setBrightness(b)
-                            }
-                        )
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(12.dp))
                         if (isIdle) {
                             Text(
                                 text = stringResource(R.string.quick_edit_hint),
@@ -294,7 +277,16 @@ fun TimerScreen(
                                 viewModel.skip()
                             },
                         )
-                        Spacer(Modifier.height(20.dp))
+                        Spacer(Modifier.height(16.dp))
+                        SoundSliderRow(
+                            currentSelection = ui.settings.audioSelection,
+                            tracks = viewModel.audioRepository.tracks,
+                            onSelectTrack = { trackId ->
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.selectAudioTrack(trackId)
+                            }
+                        )
+                        Spacer(Modifier.height(8.dp))
                         VolumeRow(
                             playing = ui.audioPlaying,
                             volume = ui.settings.volume,
@@ -306,6 +298,14 @@ fun TimerScreen(
                                 lastTouchMillis = System.currentTimeMillis()
                                 viewModel.setVolume(vol)
                             },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        BrightnessSliderRow(
+                            brightness = ui.settings.screenBrightness,
+                            onBrightnessChange = { b ->
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.setBrightness(b)
+                            }
                         )
                     }
                 }
@@ -357,23 +357,6 @@ fun TimerScreen(
                             }
                         )
                         Spacer(Modifier.height(12.dp))
-                        SoundSliderRow(
-                            currentSelection = ui.settings.audioSelection,
-                            tracks = viewModel.audioRepository.tracks,
-                            onSelectTrack = { trackId ->
-                                lastTouchMillis = System.currentTimeMillis()
-                                viewModel.selectAudioTrack(trackId)
-                            }
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        BrightnessSliderRow(
-                            brightness = ui.settings.screenBrightness,
-                            onBrightnessChange = { b ->
-                                lastTouchMillis = System.currentTimeMillis()
-                                viewModel.setBrightness(b)
-                            }
-                        )
-                        Spacer(Modifier.height(8.dp))
                         if (isIdle) {
                             Text(
                                 text = stringResource(R.string.quick_edit_hint),
@@ -419,7 +402,17 @@ fun TimerScreen(
                                 viewModel.skip()
                             },
                         )
-                        Spacer(Modifier.height(32.dp))
+                        Spacer(Modifier.height(24.dp))
+
+                        SoundSliderRow(
+                            currentSelection = ui.settings.audioSelection,
+                            tracks = viewModel.audioRepository.tracks,
+                            onSelectTrack = { trackId ->
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.selectAudioTrack(trackId)
+                            }
+                        )
+                        Spacer(Modifier.height(12.dp))
 
                         VolumeRow(
                             playing = ui.audioPlaying,
@@ -432,6 +425,15 @@ fun TimerScreen(
                                 lastTouchMillis = System.currentTimeMillis()
                                 viewModel.setVolume(vol)
                             },
+                        )
+                        Spacer(Modifier.height(12.dp))
+
+                        BrightnessSliderRow(
+                            brightness = ui.settings.screenBrightness,
+                            onBrightnessChange = { b ->
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.setBrightness(b)
+                            }
                         )
                     }
                 }
