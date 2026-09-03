@@ -171,8 +171,16 @@ class TimerViewModel @Inject constructor(
         }
     }
 
-    fun setVolume(v: Float) {
-        playback.setVolume(v)
-        viewModelScope.launch { settingsRepository.setVolume(v) }
+    fun setVolume(volume: Float) {
+        playback.setVolume(volume)
+        viewModelScope.launch {
+            settingsRepository.setVolume(volume)
+        }
+    }
+
+    fun setBrightness(brightness: Float) {
+        viewModelScope.launch {
+            settingsRepository.setScreenBrightness(brightness)
+        }
     }
 }

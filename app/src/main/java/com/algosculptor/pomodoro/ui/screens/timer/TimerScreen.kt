@@ -239,6 +239,14 @@ fun TimerScreen(
                                 viewModel.selectAudioTrack(trackId)
                             }
                         )
+                        Spacer(Modifier.height(2.dp))
+                        BrightnessSliderRow(
+                            brightness = ui.settings.screenBrightness,
+                            onBrightnessChange = { b ->
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.setBrightness(b)
+                            }
+                        )
                         Spacer(Modifier.height(4.dp))
                         if (isIdle) {
                             Text(
@@ -355,6 +363,14 @@ fun TimerScreen(
                             onSelectTrack = { trackId ->
                                 lastTouchMillis = System.currentTimeMillis()
                                 viewModel.selectAudioTrack(trackId)
+                            }
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        BrightnessSliderRow(
+                            brightness = ui.settings.screenBrightness,
+                            onBrightnessChange = { b ->
+                                lastTouchMillis = System.currentTimeMillis()
+                                viewModel.setBrightness(b)
                             }
                         )
                         Spacer(Modifier.height(8.dp))
@@ -721,6 +737,33 @@ private fun SoundSliderRow(
         },
         label = { Text(label, style = MaterialTheme.typography.labelMedium) },
     )
+}
+
+@Composable
+private fun BrightnessSliderRow(
+    brightness: Float,
+    onBrightnessChange: (Float) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .width(220.dp)
+            .padding(horizontal = 8.dp),
+    ) {
+        Text(
+            text = "☼",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(8.dp))
+        Slider(
+            value = brightness,
+            onValueChange = onBrightnessChange,
+            valueRange = 0.05f..1.0f,
+            modifier = Modifier.weight(1f),
+        )
+    }
 }
 
 

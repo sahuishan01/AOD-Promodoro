@@ -86,6 +86,10 @@ class MainActivity : ComponentActivity() {
                     showWhenLocked = settings.showWhenLocked,
                     turnScreenOn = true,
                 )
+                val lp = window.attributes
+                lp.screenBrightness = settings.screenBrightness.coerceIn(0.05f, 1.0f)
+                window.attributes = lp
+
                 if (settings.keepScreenOn) {
                     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 } else {

@@ -30,6 +30,8 @@ data class AppSettings(
     val hapticsEnabled: Boolean = true,
     val keepScreenOn: Boolean = true,
     val showWhenLocked: Boolean = true,
+    /** Screen brightness level 0.05f to 1.0f (-1f = system default) */
+    val screenBrightness: Float = 0.7f,
 )
 
 @Singleton
@@ -47,6 +49,7 @@ class SettingsRepository @Inject constructor(
         val HAPTICS = booleanPreferencesKey("haptics")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val SHOW_WHEN_LOCKED = booleanPreferencesKey("show_when_locked")
+        val SCREEN_BRIGHTNESS = floatPreferencesKey("screen_brightness")
     }
 
     val settings: Flow<AppSettings> = dataStore.data.map { p ->
@@ -61,6 +64,7 @@ class SettingsRepository @Inject constructor(
             hapticsEnabled = p[Keys.HAPTICS] ?: true,
             keepScreenOn = p[Keys.KEEP_SCREEN_ON] ?: true,
             showWhenLocked = p[Keys.SHOW_WHEN_LOCKED] ?: true,
+            screenBrightness = (p[Keys.SCREEN_BRIGHTNESS] ?: 0.7f).coerceIn(0.05f, 1f),
         )
     }
 
@@ -74,4 +78,5 @@ class SettingsRepository @Inject constructor(
     suspend fun setHaptics(enabled: Boolean) = dataStore.edit { it[Keys.HAPTICS] = enabled }
     suspend fun setKeepScreenOn(enabled: Boolean) = dataStore.edit { it[Keys.KEEP_SCREEN_ON] = enabled }
     suspend fun setShowWhenLocked(enabled: Boolean) = dataStore.edit { it[Keys.SHOW_WHEN_LOCKED] = enabled }
+    suspend fun setScreenBrightness(v: Float) = dataStore.edit { it[Keys.SCREEN_BRIGHTNESS] = v.coerceIn(0.05f, 1f) }
 }
