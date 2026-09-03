@@ -126,32 +126,49 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(24.dp))
             SectionTitle(stringResource(R.string.settings_background))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(BackgroundCatalog.all) { bg ->
                     val selected = settings.backgroundId == "bundled:${bg.id}"
+                    val accentColor = Color(bg.accentColor)
+                    
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.clickable { viewModel.selectBundledBackground(bg.id) },
                     ) {
                         Box(
-                            Modifier
-                                .size(56.dp)
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(72.dp)
+                                .background(bg.toBrush(), shape = MaterialTheme.shapes.medium)
                                 .then(
                                     if (selected) Modifier.border(
                                         BorderStroke(3.dp, MaterialTheme.colorScheme.primary),
-                                        shape = CircleShape,
-                                    ) else Modifier
+                                        shape = MaterialTheme.shapes.medium,
+                                    ) else Modifier.border(
+                                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                        shape = MaterialTheme.shapes.medium,
+                                    )
                                 )
-                                .padding(if (selected) 4.dp else 0.dp)
-                                .background(
-                                    bg.toBrush(),
-                                    shape = CircleShape,
-                                ),
-                        )
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "25:00",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = accentColor,
+                                )
+                                Text(
+                                    text = "FOCUS",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = accentColor.copy(alpha = 0.7f),
+                                )
+                            }
+                        }
                         Spacer(Modifier.height(6.dp))
                         Text(
                             bg.displayName,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelMedium,
                             color = if (selected) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
